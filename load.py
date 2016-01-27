@@ -1,3 +1,4 @@
+import gzip
 import numpy as np
 import os
 
@@ -11,6 +12,62 @@ def one_hot(x, n):
     o_h = np.zeros((len(x), n))
     o_h[np.arange(len(x)), x] = 1
     return o_h
+
+
+def get_labels(filename):
+    l = []
+    n_l = []
+    i = 0
+    with gzip.open(filename, 'rb') as f:
+        for line in f:
+            if line not in l:
+                l.append(line)
+                i += 1
+            n_l.append(i)
+    return n_l
+
+
+def get_data(filename):
+    temp = []
+    with gzip.open(filename, 'rb') as f:
+        for line in f:
+            try:
+                temp.append(np.array(map(float, str.split(line, '\t'))))
+            except Exception as e:
+                c = str.split(str(e), ": ")[-1]
+                temp.append(np.array(map(float, str.split(line.replace(c, "-1.0"), '\t'))))
+    return np.array(temp)
+
+
+def seq_load(ntrain=50000, ntest=10000):
+    data = np.load('media/data1-100.npy')
+    labels = np.load('media/labels1-100.npy')
+    number_of_classes = 104
+
+    tr_idx = []
+    te_idx = []
+    train_examples_per_class = ntrain / number_of_classes
+    test_examples_per_class = ntest / number_of_classes
+    examples_per_class = train_examples_per_class + test_examples_per_class
+
+    labels_list = np.ndarray.tolist(labels)
+    for label in set(labels):
+        if labels_list.count(label) < examples_per_class:
+            print "skipping label #%d, size:%d" % (label, labels_list.count(label))
+            continue
+
+        first = labels_list.index(label)
+        last = len(labels_list) - labels_list[::-1].index(label)
+
+        tr_idx += np.random.choice(range(first, last), train_examples_per_class, replace=False).tolist()
+        te_idx += np.random.choice(range(first, last), test_examples_per_class, replace=False).tolist()
+
+    trX = data[tr_idx].astype(float)
+    trY = labels[tr_idx]
+    teX = data[te_idx].astype(float)
+    teY = data[te_idx]
+
+    return trX, teX, trY, teY
 
 
 def mnist(ntrain=60000, ntest=10000, onehot=True):

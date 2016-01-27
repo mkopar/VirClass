@@ -1,19 +1,12 @@
-from itertools import product
-import numpy as np
-import matplotlib as mpl
-from sklearn import preprocessing
-
-mpl.use('Agg')
-import matplotlib.pyplot as plt
-import pylab as P
-
 __author__ = 'Matej'
 
+import numpy as np
 import os
 import pickle
 from Bio import Entrez
 from Bio import SeqIO
 from collections import defaultdict
+import gzip
 
 dir = "../Diploma/cache"
 if not os.path.isdir(dir):
@@ -54,6 +47,21 @@ def rec_dd():
     return defaultdict(rec_dd)
 
 
+def get_gene(rec):
+    sequence = ""
+    for f in rec.features:
+        if f.type == "gene":
+            start = f.location.nofuzzy_start
+            end = f.location.nofuzzy_end
+            if f.location.strand == 1:
+                sequence += rec.seq[start:end]
+            else:
+                # to nisem zihr
+                sequence += rec.seq[start:end].complement()
+
+    return str(sequence)
+
+
 def update_taxonomy(taxonomy, tax_path, seq_record):
     """Create dictionary with taxonomy name and IDs of sequences which belongs to specific taoxnomy."""
     if len(tax_path) == 0:
@@ -62,9 +70,11 @@ def update_taxonomy(taxonomy, tax_path, seq_record):
     tax = tax_path[0].lower()
     if tax in taxonomy:
         taxonomy[tax]["data"].append(seq_record.annotations["gi"])
+        # taxonomy[tax]["data"].append(get_gene(rec))
         update_taxonomy(taxonomy[tax], tax_path[1:], seq_record)
     else:
         taxonomy[tax] = dict({"data": list({seq_record.annotations["gi"]})})
+        # taxonomy[tax] = dict({"data": list({get_gene(rec)})})
         temp = update_taxonomy(taxonomy[tax], tax_path[1:], seq_record)
         if len(temp) > 1:  # 1 = data, 2 = data + key
             taxonomy = temp
@@ -78,7 +88,7 @@ def check_taxonomy_filter(taxonomy_name, to_filter):
         for temp_tax_el in temp_tax:
             if temp_tax_el in to_filter:
                 in_to_filter = True
-                print "filtering taxonomy in ", rec.annotations["taxonomy"]
+                print "filtered ", rec.annotations["taxonomy"]
     return in_to_filter
 
 
@@ -104,13 +114,32 @@ def filter_taxonomy(taxonomy, filter_list):
 
         # filter
         if i.split(" ")[0] in filter_list:
-            ignored.append(("filter " + i, len(taxonomy[i]["data"])))
+            #ignored.append(("filter " + i, len(taxonomy[i]["data"])))
             taxonomy.pop(i)
             continue
 
         filter_taxonomy(taxonomy[i], filter_list)
 
     return taxonomy
+
+
+def simplify(taxonomy):
+    # check for recurse exit
+    if type(taxonomy) is defaultdict or type(taxonomy) is dict:
+        for i in [x for x in taxonomy.keys() if x != "data"]:
+            # check the list nodes
+
+            if set(taxonomy[i]) == set(list({"data"})):
+                # if parent has only one list node, remove it
+                #if len([x for x in taxonomy.keys() if x != "data"]) == 1:
+                taxonomy.pop(i)
+                continue
+
+            else:
+                simplify(taxonomy[i])
+
+    else:
+        return taxonomy
 
 
 def count_list_nodes(taxonomy):
@@ -143,7 +172,7 @@ def count_examples(taxonomy):
     return count
 
 
-def get_list_nodes(taxonomy, parent):
+def get_list_nodes(taxonomy, parent=""):
     # preverjeno na roke in dela
     list_nodes = list()
     keys = [x for x in taxonomy.keys() if x != "data"]
@@ -151,10 +180,12 @@ def get_list_nodes(taxonomy, parent):
         if set(taxonomy[i]) == set(list({"data"})):
             #list_nodes.append((i, parent, taxonomy[i]))
             if i == keys[-1]:
-                list_nodes.append((i, parent, taxonomy[i]))
+                # list_nodes.append((i, parent, taxonomy[i]))
+                list_nodes.append((i, parent))
                 return list_nodes
             else:
-                list_nodes.append((i, parent, taxonomy[i]))
+                # list_nodes.append((i, parent, taxonomy[i]))
+                list_nodes.append((i, parent))
         else:
             list_nodes += get_list_nodes(taxonomy[i], parent + "->" + i)
     return list_nodes
@@ -179,74 +210,96 @@ def get_all_nodes(taxonomy, parent=""):
     return all_nodes
 
 
-def get_path_row(node, path_attributes):
-    path = node.split("->")[1:]  # because parent starts like that "->viruses->dsdna..." and first el is always empty
-    # if rest in path, we need to prepare different path list
-    if "rest" in path:
-        # rest could be only list node - if not, raise an error
-        if "rest" != path[-1]:
-            ValueError("rest is not list node. List node: ", path[-1])
-
-        # rest is list node, so we need to merge last two elements of path into last
-        path[-1] = path[-2] + "->" + path[-1]
-
-    #vector2 = MultiLabelBinarizer(classes=path_attributes).fit_transform([path, path_attributes])[0]
-    # mlb is not working if i pass classes parameter with length 178
-
-    #vector = np.zeros(len(path_attributes), dtype=np.float32)
-
-    #c = 0
-    vector = np.array([1 if attr in path else 0
-                       for attr in path_attributes],
-                      dtype=np.float32)
-    #for attr in path_attributes:
-    #    if attr in path:
-    #        vector[c] = 1
-    #    c += 1
-    if sum(vector) != len(path):
-        ValueError("problems in get_path_row...")
-
-    return vector
+train_data = []
+label = []
+class_size = []
 
 
-def draw_length_histogram(list_nodes, in_a_row):
-    list_lengths = list()
-    for list_el in list_nodes:
-        for list_id in list_el[2]["data"]:
-            list_temp = get_rec(list_id).seq
-            list_lengths.append(len(list_temp))
-    print sorted(set(list_lengths))
-    print max(list_lengths)
-    bins = np.arange(0, 1400000, 100000)
-    n, bins, patches = P.hist(list_lengths, bins, histtype='bar', rwidth=0.8, log=True)
-    plt.axvline(200000, color='r', linestyle='dashed', linewidth=1)
-    plt.xlabel("lengths")
-    plt.tight_layout()
-    ylims = P.ylim()
-    P.ylim((0.1, ylims[1]))
+def build_data(taxonomy, seq_len=100):
+    for node in [x for x in taxonomy.keys() if x != "data"]:
+        if set(taxonomy[node]) == set(list({"data"})):
+            sum_100 = 0
+            for gid in taxonomy[node]["data"]:
+                temp_rec = get_rec(gid)
+                temp_seq = temp_rec.seq._data
+                print "%s: %d for %d sequences" % (node, len(temp_seq) / seq_len, seq_len)
 
-    plt.savefig("lenghts_histogram"+str(in_a_row)+".png")
+                sum_100 += (len(temp_seq) / seq_len)
+                j = 0
+                while (j+1) * seq_len < len(temp_seq):
+                    vector = list(temp_seq[j * seq_len: (j + 1) * seq_len])
+                    for n, e in enumerate(vector):
+                        if e == "A":
+                            vector[n] = 0.0
+                        elif e == "T":
+                            vector[n] = 0.33
+                        elif e == "C":
+                            vector[n] = 0.66
+                        elif e == "G":
+                            vector[n] = 1.0
+                        else:
+                            vector[n] = 0.5
+                            # ce je vrednost nepoznana naj bo enakmoerno oddaljena med 0 in 1
+                            # (ko bomo imel bite bi tukaj dal 0.25 na vse 4 vrednosti)
+                    train_data.append(vector)
+                    label.append(node)
+                    j += 1
+            print "number of 100 long sequences for %s: %d" % (node, sum_100)
+            class_size.append((sum_100, node))
 
+        else:
+            build_data(taxonomy[node], seq_len)
 
 if __name__ == "__main__":
     # call: python get_viral_sequence.py>log.out 2>log.err
 
-    # pobrisi vse ki nimajo naslednika niti brata
-
     taxonomy = rec_dd()
-    i = 0
+    count = 0
     for genome_id in id_list:
         try:
             rec = get_rec(genome_id)
-            update_taxonomy(taxonomy, rec.annotations["taxonomy"], rec)
+            in_filter = check_taxonomy_filter(rec.annotations["taxonomy"], list({"bacteria", "unclassified", "unassigned"}))
+            if not in_filter:
+                update_taxonomy(taxonomy, rec.annotations["taxonomy"], rec)
+
+            # if count == 20:
+            #     break
+            # count += 1
         except Exception as e:
             print("problems...")
             print e
 
-    print_nice(taxonomy)
-
     print "no of examples after taxonomy was built: %d" % count_examples(taxonomy)
     print "no of list nodes after taxonomy was built: %d" % count_list_nodes(taxonomy)
 
-    print "filtering bacteria, unclassified, unassigned..."
-    filter_taxonomy(taxonomy, list({"bacteria", "unclassified", "unassigned"}))
+    print_nice(taxonomy)
+
+    simplify(taxonomy)
+
+    print_nice(taxonomy)
+
+    print get_list_nodes(taxonomy)
+
+    build_data(taxonomy, 100)
+
+    print len(train_data)
+    print len(label)
+
+    print sorted(class_size)
+
+    np.save('media/data1-100', train_data)
+    # with gzip.open('media/data1-100.gz', 'wb') as file:
+    #     file.writelines('\t'.join(str(j) for j in i) + '\n' for i in train_data)
+
+    label_n = []
+    temp_l = []
+    label_number = 0
+    for l in label:
+        if l not in temp_l:
+            temp_l.append(l)
+            label_number += 1
+        label_n.append(label_number)
+
+    np.save('media/labels1-100', label_n)
+    # with gzip.open('media/labels1-100.gz', 'wb') as file:
+    #     file.writelines(i + '\n' for i in label)
