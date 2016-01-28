@@ -39,10 +39,9 @@ def get_data(filename):
     return np.array(temp)
 
 
-def seq_load(ntrain=50000, ntest=10000):
+def seq_load(ntrain=50000, ntest=10000, number_of_classes=104):
     data = np.load('media/data1-100.npy')
     labels = np.load('media/labels1-100.npy')
-    number_of_classes = 104
 
     tr_idx = []
     te_idx = []
@@ -50,17 +49,29 @@ def seq_load(ntrain=50000, ntest=10000):
     test_examples_per_class = ntest / number_of_classes
     examples_per_class = train_examples_per_class + test_examples_per_class
 
+    print "train examples per class: %d" % train_examples_per_class
+    print "test examples per class: %d" % test_examples_per_class
+    print "examples per class: %d" % examples_per_class
+
+    total_skipped = 0
+
     labels_list = np.ndarray.tolist(labels)
     for label in set(labels):
         if labels_list.count(label) < examples_per_class:
             print "skipping label #%d, size:%d" % (label, labels_list.count(label))
+            total_skipped += labels_list.count(label)
             continue
 
         first = labels_list.index(label)
         last = len(labels_list) - labels_list[::-1].index(label)
 
-        tr_idx += np.random.choice(range(first, last), train_examples_per_class, replace=False).tolist()
-        te_idx += np.random.choice(range(first, last), test_examples_per_class, replace=False).tolist()
+        temp_tr = np.random.choice(range(first, last), train_examples_per_class, replace=False).tolist()
+        tr_idx += temp_tr
+
+        test_set = list(set(range(first, last)) - set(temp_tr))
+        te_idx += np.random.choice(test_set, test_examples_per_class, replace=False).tolist()
+
+    print "total skipped: %d" % total_skipped
 
     trX = data[tr_idx].astype(float)
     trY = labels[tr_idx]
