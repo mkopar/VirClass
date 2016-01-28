@@ -59,8 +59,15 @@ def seq_load(ntrain=50000, ntest=10000):
         first = labels_list.index(label)
         last = len(labels_list) - labels_list[::-1].index(label)
 
-        tr_idx += np.random.choice(range(first, last), train_examples_per_class, replace=False).tolist()
-        te_idx += np.random.choice(range(first, last), test_examples_per_class, replace=False).tolist()
+        if last - first != labels_list.count(label):
+            print "something went wrong..."
+            return -1
+
+        temp_tr = np.random.choice(range(first, last), train_examples_per_class, replace=False).tolist()
+        tr_idx += temp_tr
+
+        test_set = list(set(range(first, last)) - set(temp_tr))
+        te_idx += np.random.choice(test_set, test_examples_per_class, replace=False).tolist()
 
     trX = data[tr_idx].astype(float)
     trY = labels[tr_idx]
