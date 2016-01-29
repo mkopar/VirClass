@@ -8,7 +8,7 @@ from Bio import SeqIO
 from collections import defaultdict
 import gzip
 
-dir = "../Diploma/cache"
+dir = "cache"
 if not os.path.isdir(dir):
     os.makedirs(dir)
 
