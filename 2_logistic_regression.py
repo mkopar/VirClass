@@ -17,7 +17,6 @@ num_of_class = 104
 trX, teX, trY, teY = seq_load(number_of_classes=num_of_class, onehot=True)
 # trX, teX, trY, teY = mnist(onehot=True)
 
-
 X = T.fmatrix()
 Y = T.fmatrix()
 
@@ -35,5 +34,9 @@ predict = theano.function(inputs=[X], outputs=y_pred, allow_input_downcast=True)
 
 for i in range(100):
     for start, end in zip(range(0, len(trX), 128), range(128, len(trX), 128)):
+	print start
+	print end
+	print trX.shape
+	print trY.shape
         cost = train(trX[start:end], trY[start:end])
     print i, np.mean(np.argmax(teY, axis=1) == predict(teX)), np.mean(predict(teX))
