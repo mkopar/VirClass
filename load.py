@@ -27,24 +27,26 @@ def get_labels(filename):
     return n_l
 
 
-def get_data(filename):
+def read_file(filename):
     temp = []
     with gzip.open(filename, 'rb') as f:
         for line in f:
             try:
                 temp.append(np.array(map(float, str.split(line, '\t'))))
             except Exception as e:
-                c = str.split(str(e), ": ")[-1]
-                temp.append(np.array(map(float, str.split(line.replace(c, "-1.0"), '\t'))))
+                print e
+                return
     return np.array(temp)
 
 
 def seq_load(ntrain=50000, ntest=10000, number_of_classes=104, onehot=True):
+    # data1 = read_file('media/data3-100.gz')
     data = np.load('media/data1-100.npy')
     labels = np.load('media/labels1-100.npy')
 
     tr_idx = []
     te_idx = []
+
     train_examples_per_class = ntrain / number_of_classes
     test_examples_per_class = ntest / number_of_classes
     examples_per_class = train_examples_per_class + test_examples_per_class
