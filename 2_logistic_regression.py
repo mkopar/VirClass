@@ -12,12 +12,13 @@ def init_weights(shape):
 def model(X, w):
     return T.nnet.softmax(T.dot(X, w))
 
-trX, teX, trY, teY = seq_load()
+num_of_class = 104
+trX, teX, trY, teY = seq_load(number_of_classes=num_of_class)
 
 X = T.fmatrix()
 Y = T.fmatrix()
 
-w = init_weights((784, 10))
+w = init_weights((100, num_of_class))
 
 py_x = model(X, w)
 y_pred = T.argmax(py_x, axis=1)
@@ -31,5 +32,9 @@ predict = theano.function(inputs=[X], outputs=y_pred, allow_input_downcast=True)
 
 for i in range(100):
     for start, end in zip(range(0, len(trX), 128), range(128, len(trX), 128)):
+	print start
+	print end
+	print trX.shape
+	print trY.shape
         cost = train(trX[start:end], trY[start:end])
     print i, np.mean(np.argmax(teY, axis=1) == predict(teX))
