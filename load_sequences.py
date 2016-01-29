@@ -226,8 +226,8 @@ def build_data(taxonomy, seq_len=100):
 
                 sum_100 += (len(temp_seq) / seq_len)
                 j = 0
-                while (j+1) * seq_len < len(temp_seq):
-                    vector = list(temp_seq[j * seq_len: (j + 1) * seq_len])
+                while (j + 1) * seq_len < len(temp_seq):
+                    vector = list(temp_seq[(int)(j * seq_len): (int)((j + 1) * seq_len)])
                     for n, e in enumerate(vector):
                         if e == "A":
                             vector[n] = 0.0
@@ -243,6 +243,7 @@ def build_data(taxonomy, seq_len=100):
                             # (ko bomo imel bite bi tukaj dal 0.25 na vse 4 vrednosti)
                     train_data.append(vector)
                     label.append(node)
+                    # j += 0.5
                     j += 1
             print "number of 100 long sequences for %s: %d" % (node, sum_100)
             class_size.append((sum_100, node))
@@ -288,9 +289,6 @@ if __name__ == "__main__":
     print sorted(class_size)
 
     np.save('media/data1-100', train_data)
-    # with gzip.open('media/data1-100.gz', 'wb') as file:
-    #     file.writelines('\t'.join(str(j) for j in i) + '\n' for i in train_data)
-
     label_n = []
     temp_l = []
     label_number = 0
@@ -301,5 +299,22 @@ if __name__ == "__main__":
         label_n.append(label_number)
 
     np.save('media/labels1-100', label_n)
-    # with gzip.open('media/labels1-100.gz', 'wb') as file:
+
+    # with gzip.open('media/data3-100.gz', 'wb') as file:
+    #     file.writelines('\t'.join(str(j) for j in i) + '\n' for i in train_data)
+
+    # with gzip.open('media/labels3-100.gz', 'wb') as file:
     #     file.writelines(i + '\n' for i in label)
+
+
+    # import subprocess
+    #
+    # p = subprocess.Popen("gzip -c > media/data3_1-100.gz", shell=True, stdin=subprocess.PIPE)
+    # for i in train_data:
+    #     p.stdin.writelines('\t'.join(str(j) for j in i) + '\n')
+    # p.communicate()  # Finish writing data and wait for subprocess to finish
+
+    # p = subprocess.Popen("gzip -c > media/labels3_1-100.gz", shell=True, stdin=subprocess.PIPE)
+    # for i in label:
+    #     p.stdin.writelines(i + '\n')
+    # p.communicate()  # Finish writing data and wait for subprocess to finish
