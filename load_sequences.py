@@ -288,6 +288,10 @@ if __name__ == "__main__":
 
     print sorted(class_size)
 
+    dir = "media"
+    if not os.path.isdir(dir):
+        os.makedirs(dir)
+
     np.save('media/data1-100', train_data)
     label_n = []
     temp_l = []
