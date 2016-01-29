@@ -39,7 +39,7 @@ def get_data(filename):
     return np.array(temp)
 
 
-def seq_load(ntrain=50000, ntest=10000, number_of_classes=104):
+def seq_load(ntrain=50000, ntest=10000, number_of_classes=104, onehot=True):
     data = np.load('media/data1-100.npy')
     labels = np.load('media/labels1-100.npy')
 
@@ -49,17 +49,10 @@ def seq_load(ntrain=50000, ntest=10000, number_of_classes=104):
     test_examples_per_class = ntest / number_of_classes
     examples_per_class = train_examples_per_class + test_examples_per_class
 
-    print "train examples per class: %d" % train_examples_per_class
-    print "test examples per class: %d" % test_examples_per_class
-    print "examples per class: %d" % examples_per_class
-
-    total_skipped = 0
-
     labels_list = np.ndarray.tolist(labels)
     for label in set(labels):
         if labels_list.count(label) < examples_per_class:
             print "skipping label #%d, size:%d" % (label, labels_list.count(label))
-            total_skipped += labels_list.count(label)
             continue
 
         first = labels_list.index(label)
@@ -71,12 +64,23 @@ def seq_load(ntrain=50000, ntest=10000, number_of_classes=104):
         test_set = list(set(range(first, last)) - set(temp_tr))
         te_idx += np.random.choice(test_set, test_examples_per_class, replace=False).tolist()
 
-    print "total skipped: %d" % total_skipped
-
     trX = data[tr_idx].astype(float)
     trY = labels[tr_idx]
     teX = data[te_idx].astype(float)
-    teY = data[te_idx]
+    teY = labels[te_idx]
+
+    # trX = trX[:ntrain]
+    # trY = trY[:ntrain]
+    #
+    # teX = teX[:ntest]
+    # teY = teY[:ntest]
+
+    if onehot:
+        trY = one_hot(trY, number_of_classes)
+        teY = one_hot(teY, number_of_classes)
+    else:
+        trY = np.asarray(trY)
+        teY = np.asarray(teY)
 
     return trX, teX, trY, teY
 

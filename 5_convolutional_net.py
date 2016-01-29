@@ -44,17 +44,17 @@ def model(X, w, w2, w3, w4, p_drop_conv, p_drop_hidden):
     # TODO spremeni max_pool argumente
     l1a = rectify(conv2d(X, w, border_mode='full'))
     # l1 = max_pool_2d(l1a, (2, 2))  # 0,2 bi blo za nas primer (al 0,5?)
-    l1 = max_pool_2d(l1a, (1, 5))
+    l1 = max_pool_2d(l1a, (1, 2))
     l1 = dropout(l1, p_drop_conv)
 
     l2a = rectify(conv2d(l1, w2))
     # l2 = max_pool_2d(l2a, (2, 2))
-    l2 = max_pool_2d(l2a, (1, 5))
+    l2 = max_pool_2d(l2a, (1, 2))
     l2 = dropout(l2, p_drop_conv)
 
     l3a = rectify(conv2d(l2, w3))
     # l3b = max_pool_2d(l3a, (2, 2))
-    l3b = max_pool_2d(l3a, (1, 5))
+    l3b = max_pool_2d(l3a, (1, 2))
     l3 = T.flatten(l3b, outdim=2)
     l3 = dropout(l3, p_drop_conv)
 
@@ -64,10 +64,11 @@ def model(X, w, w2, w3, w4, p_drop_conv, p_drop_hidden):
     pyx = softmax(T.dot(l4, w_o))
     return l1, l2, l3, l4, pyx
 
-trX, teX, trY, teY = seq_load()
+num_of_classes = 104
+trX, teX, trY, teY = seq_load(number_of_classes=num_of_classes, onehot=True)
 
-trX = trX.reshape(-1, 1, 28, 28)  # TODO spremeni argumente tukaj
-teX = teX.reshape(-1, 1, 28, 28)
+trX = trX.reshape(-1, 1, 1, 100)  # TODO spremeni argumente tukaj
+teX = teX.reshape(-1, 1, 1, 100)
 
 X = T.ftensor4()
 Y = T.fmatrix()
@@ -79,11 +80,11 @@ Y = T.fmatrix()
 # w3 = init_weights((128, 64, 3, 3))
 # w4 = init_weights((128 * 3 * 3, 625))
 # w_o = init_weights((625, 10))  # 10 ker imamo 10 koncnih vrednosti
-w = init_weights((16, 1, 1, 10))
-w2 = init_weights((32, 16, 1, 10))
-w3 = init_weights((64, 32, 1, 10))
-w4 = init_weights((64 * 1 * 10, 625))  # to ne bo delal
-w_o = init_weights((625, 10))  # namesto 10 damo stevilo koncnih razredov
+w = init_weights((32, 1, 1, 3))
+w2 = init_weights((64, 32, 1, 3))
+w3 = init_weights((128, 64, 1, 3))
+w4 = init_weights((128 * 1 * 3, 97))  # to ne bo delal
+w_o = init_weights((97, num_of_classes))  # namesto 10 damo stevilo koncnih razredov
 
 noise_l1, noise_l2, noise_l3, noise_l4, noise_py_x = model(X, w, w2, w3, w4, 0.2, 0.5)
 l1, l2, l3, l4, py_x = model(X, w, w2, w3, w4, 0., 0.)
