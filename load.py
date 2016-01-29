@@ -39,10 +39,9 @@ def get_data(filename):
     return np.array(temp)
 
 
-def seq_load(ntrain=50000, ntest=10000):
+def seq_load(ntrain=50000, ntest=10000, number_of_classes=104, onehot=True):
     data = np.load('media/data1-100.npy')
     labels = np.load('media/labels1-100.npy')
-    number_of_classes = 104
 
     tr_idx = []
     te_idx = []
@@ -59,10 +58,6 @@ def seq_load(ntrain=50000, ntest=10000):
         first = labels_list.index(label)
         last = len(labels_list) - labels_list[::-1].index(label)
 
-        if last - first != labels_list.count(label):
-            print "something went wrong..."
-            return -1
-
         temp_tr = np.random.choice(range(first, last), train_examples_per_class, replace=False).tolist()
         tr_idx += temp_tr
 
@@ -72,7 +67,20 @@ def seq_load(ntrain=50000, ntest=10000):
     trX = data[tr_idx].astype(float)
     trY = labels[tr_idx]
     teX = data[te_idx].astype(float)
-    teY = data[te_idx]
+    teY = labels[te_idx]
+
+    # trX = trX[:ntrain]
+    # trY = trY[:ntrain]
+    #
+    # teX = teX[:ntest]
+    # teY = teY[:ntest]
+
+    if onehot:
+        trY = one_hot(trY, number_of_classes)
+        teY = one_hot(teY, number_of_classes)
+    else:
+        trY = np.asarray(trY)
+        teY = np.asarray(teY)
 
     return trX, teX, trY, teY
 
