@@ -5,6 +5,9 @@ import numpy as np
 from load import seq_load
 from theano.tensor.nnet.conv import conv2d
 from theano.tensor.signal.downsample import max_pool_2d
+from theano.tensor.signal.downsample import DownsampleFactorMax
+
+theano.config.floatX='float32'
 
 srng = RandomStreams()
 
@@ -40,21 +43,34 @@ def RMSprop(cost, params, lr=0.001, rho=0.9, epsilon=1e-6):
         updates.append((p, p - lr * g))
     return updates
 
+# convolution: filters are moved by one position at a time, see parameter subsample=(1, 1)
+#
+# max pooling:
+#   scaling the input before applying the maxpool filter and
+#   displacement (stride) when sliding the max pool filters
+stride1=2
+downscale1=3
+
+stride2=2
+downscale2=2
+
+stride3=2
+downscale3=1
+
 def model(X, w, w2, w3, w4, p_drop_conv, p_drop_hidden):
     # TODO spremeni max_pool argumente
-    l1a = rectify(conv2d(X, w, border_mode='full'))
-    # l1 = max_pool_2d(l1a, (2, 2))  # 0,2 bi blo za nas primer (al 0,5?)
-    l1 = max_pool_2d(l1a, (1, 2))
+    l1a = rectify(conv2d(X, w, border_mode='valid', subsample=(1, 1))) # stride along one (horizontal) dimension only
+    l1 = max_pool_2d(l1a, (1, downscale1), st=(1, stride1)) # (1,1)=(vertical, horizontal) downscale, st=(1, step): move to every stride1 column and perform max_pooling there
     l1 = dropout(l1, p_drop_conv)
 
-    l2a = rectify(conv2d(l1, w2))
+    l2a = rectify(conv2d(l1, w2, subsample=(1, 1))) # stride along horizontal
     # l2 = max_pool_2d(l2a, (2, 2))
-    l2 = max_pool_2d(l2a, (1, 2))
+    l2 = max_pool_2d(l2a, (1, downscale2), st=(1, stride2))
     l2 = dropout(l2, p_drop_conv)
 
-    l3a = rectify(conv2d(l2, w3))
+    l3a = rectify(conv2d(l2, w3, subsample=(1, 1))) # stride along horizontal
     # l3b = max_pool_2d(l3a, (2, 2))
-    l3b = max_pool_2d(l3a, (1, 2))
+    l3b = max_pool_2d(l3a, (1, downscale3), st=(1, stride3))
     l3 = T.flatten(l3b, outdim=2)
     l3 = dropout(l3, p_drop_conv)
 
@@ -67,24 +83,44 @@ def model(X, w, w2, w3, w4, p_drop_conv, p_drop_hidden):
 num_of_classes = 104
 trX, teX, trY, teY = seq_load(number_of_classes=num_of_classes, onehot=True)
 
+print(trX.shape)
 trX = trX.reshape(-1, 1, 1, 100)  # TODO spremeni argumente tukaj
 teX = teX.reshape(-1, 1, 1, 100)
 
 X = T.ftensor4()
 Y = T.fmatrix()
 
-# conv weights (n_kernels, n_channels, kernel_w, kernel_h) --> tukaj bi popravil zadnji dve na 0,3 ali 1,3 ker imam samo vektor
-# TODO nastavi ustrezne utezi
-# w = init_weights((32, 1, 3, 3))
-# w2 = init_weights((64, 32, 3, 3))
-# w3 = init_weights((128, 64, 3, 3))
-# w4 = init_weights((128 * 3 * 3, 625))
-# w_o = init_weights((625, 10))  # 10 ker imamo 10 koncnih vrednosti
-w = init_weights((32, 1, 1, 3))
-w2 = init_weights((64, 32, 1, 3))
-w3 = init_weights((128, 64, 1, 3))
-w4 = init_weights((128 * 1 * 3, 97))  # to ne bo delal
-w_o = init_weights((97, num_of_classes))  # namesto 10 damo stevilo koncnih razredov
+# size of convolution windows, for each layer different values can be used
+cwin1=6
+cwin2=5
+cwin3=3
+num_filters_1=32 # how many different filters to lear at each layer
+num_filters_2=48
+num_filters_3=64
+w = init_weights((num_filters_1, 1, 1, cwin1)) # first convolution, 32 filters, stack size 1, 1 rows, cwin1 columns
+w2 = init_weights((num_filters_2, num_filters_1, 1, cwin2)) # second convolution, 64 filters, stack size 32 (one stack for each filter from previous layer), 1 row, cwin2 columns
+w3 = init_weights((num_filters_3, num_filters_2, 1, cwin3)) # third convolution, 128 filters, stack size 64 (one stack for each filter from previous layes), 1 row, cwin3 columns
+
+# expected
+es = 100
+# l1 conv:
+es = (es - cwin1 + 1)
+# l1 max_pool:
+es = DownsampleFactorMax.out_shape((1, es), (1, downscale1), st=(1, stride1))[1]
+
+# l2 conv:
+es = (es - cwin2 + 1)
+# l2 max_pool:
+es = DownsampleFactorMax.out_shape((1, es), (1, downscale2), st=(1, stride2))[1]
+
+# l3 conv:
+es = (es - cwin3 + 1)
+# l3 max_pool:
+es = DownsampleFactorMax.out_shape((1, es), (1, downscale3), st=(1, stride3))[1]
+print es
+
+w4 = init_weights((num_filters_3 * es, 500))  # fully conected last layer, connects the outputs of 128 filters to 500 (arbitrary) hidden nodes, which are then connected to the output nodes
+w_o = init_weights((500, num_of_classes))  # namesto 10 damo stevilo koncnih razredov
 
 noise_l1, noise_l2, noise_l3, noise_l4, noise_py_x = model(X, w, w2, w3, w4, 0.2, 0.5)
 l1, l2, l3, l4, py_x = model(X, w, w2, w3, w4, 0., 0.)
@@ -102,3 +138,4 @@ for i in range(100):
     for start, end in zip(range(0, len(trX), 128), range(128, len(trX), 128)):
         cost = train(trX[start:end], trY[start:end])
     print np.mean(np.argmax(teY, axis=1) == predict(teX))
+
