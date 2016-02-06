@@ -1,6 +1,9 @@
 import gzip
+import pickle
+import random
 import numpy as np
 import os
+import sys
 
 datasets_dir = 'media/datasets/'
 
@@ -39,43 +42,82 @@ def read_file(filename):
     return np.array(temp)
 
 
-def seq_load(ntrain=50000, ntest=10000, number_of_classes=104, onehot=True):
-    # data1 = read_file('media/data3-100.gz')
-    data = np.load('media/data1-100.npy')
-    labels = np.load('media/labels1-100.npy')
+def load_obj(dir, name):
+    with open(dir + '/' + name + '.pkl.gz', 'rb') as f:
+        return pickle.load(f)
 
-    tr_idx = []
-    te_idx = []
 
-    train_examples_per_class = ntrain / number_of_classes
-    test_examples_per_class = ntest / number_of_classes
-    examples_per_class = train_examples_per_class + test_examples_per_class
+def seq_to_bits(seq):
+    vector = []
+    for n, e in enumerate(seq):
+        if e == "A":
+            vector += [1, 0, 0, 0]
+        elif e == "T":
+            vector += [0, 1, 0, 0]
+        elif e == "C":
+            vector += [0, 0, 1, 0]
+        elif e == "G":
+            vector += [0, 0, 0, 1]
+        else:
+            vector += [1, 1, 1, 1]
 
-    labels_list = np.ndarray.tolist(labels)
-    for label in set(labels):
-        if labels_list.count(label) < examples_per_class:
-            print "skipping label #%d, size:%d" % (label, labels_list.count(label))
-            continue
+    assert len(vector) == 4*len(seq)
+    return vector
 
-        first = labels_list.index(label)
-        last = len(labels_list) - labels_list[::-1].index(label)
 
-        temp_tr = np.random.choice(range(first, last), train_examples_per_class, replace=False).tolist()
-        tr_idx += temp_tr
+def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.maxint)):
 
-        test_set = list(set(range(first, last)) - set(temp_tr))
-        te_idx += np.random.choice(test_set, test_examples_per_class, replace=False).tolist()
+    seq_len = 100
 
-    trX = data[tr_idx].astype(float)
-    trY = labels[tr_idx]
-    teX = data[te_idx].astype(float)
-    teY = labels[te_idx]
+    # nastavi seed
+    random.seed(seed)
 
-    # trX = trX[:ntrain]
-    # trY = trY[:ntrain]
-    #
-    # teX = teX[:ntest]
-    # teY = teY[:ntest]
+    dir = "media"
+    try:
+        trX = pickle.load(open(dir + "/train-data-seed_%d.pkl.gz" % seed, "rb"))
+        trY = pickle.load(open(dir + "/train-labels-seed_%d.pkl.gz" % seed, "rb"))
+        teX = pickle.load(open(dir + "/t10k-data-seed_%d.pkl.gz" % seed, "rb"))
+        teY = pickle.load(open(dir + "/t10k-labels-seed_%d.pkl.gz" % seed, "rb"))
+    except IOError:  # , FileNotFoundError:
+        data = load_obj(dir, "data_raw")
+        labels = load_obj(dir, "labels_raw")
+
+        number_of_classes = len(labels)
+        train_examples_per_class = ntrain / number_of_classes
+        test_examples_per_class = ntest / number_of_classes
+        examples_per_class = train_examples_per_class + test_examples_per_class
+
+        trX = []
+        trY = []
+        teX = []
+        teY = []
+
+        for label in set(labels):
+            temp_count = 0
+            first = labels.index(label)
+            last = len(labels) - labels[::-1].index(label)
+            print "number of examples in class: %d" % (last - first)
+            print "sum lengths of genomes: %d" % sum(len(s) for s in data)
+            while temp_count < examples_per_class:
+                vir_idx     = random.choice(range(first, last))  # nakljucno izberi virus iz razreda
+                sample_idx  = data[vir_idx].choice(range(0, len(data[vir_idx]) - seq_len))  # nakljucno vzorci virus
+
+                if temp_count < train_examples_per_class:
+                    trX.append(seq_to_bits(data[vir_idx][sample_idx]))
+                    trY.append(label)
+                else:
+                    teX.append(seq_to_bits(data[vir_idx][sample_idx]))
+                    teY.append(label)
+
+                temp_count += 1
+
+        pickle.dump(trX, open(dir + "/train-data-seed_%d.pkl.gz" % seed, "wb"), -1)
+        pickle.dump(trY, open(dir + "/train-labels-seed_%d.pkl.gz" % seed, "wb"), -1)
+        pickle.dump(teX, open(dir + "/t10k-data-seed_%d.pkl.gz" % seed, "wb"), -1)
+        pickle.dump(teY, open(dir + "/t10k-labels-seed_%d.pkl.gz" % seed, "wb"), -1)
+
+
+    number_of_classes = len(labels)
 
     if onehot:
         trY = one_hot(trY, number_of_classes)
@@ -85,6 +127,51 @@ def seq_load(ntrain=50000, ntest=10000, number_of_classes=104, onehot=True):
         teY = np.asarray(teY)
 
     return trX, teX, trY, teY
+
+    # data = np.load('media/data1-100.npy')
+    # labels = np.load('media/labels1-100.npy')
+    #
+    # tr_idx = []
+    # te_idx = []
+    #
+    # train_examples_per_class = ntrain / number_of_classes
+    # test_examples_per_class = ntest / number_of_classes
+    # examples_per_class = train_examples_per_class + test_examples_per_class
+    #
+    # labels_list = np.ndarray.tolist(labels)
+    # for label in set(labels):
+    #     if labels_list.count(label) < examples_per_class:
+    #         print "skipping label #%d, size:%d" % (label, labels_list.count(label))
+    #         continue
+    #
+    #     first = labels_list.index(label)
+    #     last = len(labels_list) - labels_list[::-1].index(label)
+    #
+    #     temp_tr = np.random.choice(range(first, last), train_examples_per_class, replace=False).tolist()
+    #     tr_idx += temp_tr
+    #
+    #     test_set = list(set(range(first, last)) - set(temp_tr))
+    #     te_idx += np.random.choice(test_set, test_examples_per_class, replace=False).tolist()
+    #
+    # trX = data[tr_idx].astype(float)
+    # trY = labels[tr_idx]
+    # teX = data[te_idx].astype(float)
+    # teY = labels[te_idx]
+
+    # trX = trX[:ntrain]
+    # trY = trY[:ntrain]
+    #
+    # teX = teX[:ntest]
+    # teY = teY[:ntest]
+
+    # if onehot:
+    #     trY = one_hot(trY, number_of_classes)
+    #     teY = one_hot(teY, number_of_classes)
+    # else:
+    #     trY = np.asarray(trY)
+    #     teY = np.asarray(teY)
+    #
+    # return trX, teX, trY, teY
 
 
 def mnist(ntrain=60000, ntest=10000, onehot=True):
