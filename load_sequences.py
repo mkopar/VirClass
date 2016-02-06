@@ -104,40 +104,17 @@ def print_nice(taxonomy, level=0):
             print_nice(taxonomy[i], level + 1)
 
 
-def filter_taxonomy(taxonomy, filter_list):
-    """Remove bacteria, unclassified, ... nodes."""
-
-    if type(taxonomy) is list:
-        return taxonomy
-
-    for i in [x for x in taxonomy.keys() if x != "data"]:
-
-        # filter
-        if i.split(" ")[0] in filter_list:
-            #ignored.append(("filter " + i, len(taxonomy[i]["data"])))
-            taxonomy.pop(i)
-            continue
-
-        filter_taxonomy(taxonomy[i], filter_list)
-
-    return taxonomy
-
-
-def simplify(taxonomy):
+def remove_lists(taxonomy):
     # check for recurse exit
     if type(taxonomy) is defaultdict or type(taxonomy) is dict:
         for i in [x for x in taxonomy.keys() if x != "data"]:
-            # check the list nodes
-
             if set(taxonomy[i]) == set(list({"data"})):
                 # if parent has only one list node, remove it
                 #if len([x for x in taxonomy.keys() if x != "data"]) == 1:
                 taxonomy.pop(i)
                 continue
-
             else:
-                simplify(taxonomy[i])
-
+                remove_lists(taxonomy[i])
     else:
         return taxonomy
 
@@ -210,7 +187,7 @@ def get_all_nodes(taxonomy, parent=""):
     return all_nodes
 
 
-train_data = []
+data = []
 label = []
 class_size = []
 
@@ -218,38 +195,61 @@ class_size = []
 def build_data(taxonomy, seq_len=100):
     for node in [x for x in taxonomy.keys() if x != "data"]:
         if set(taxonomy[node]) == set(list({"data"})):
-            sum_100 = 0
+            # sum_100 = 0
             for gid in taxonomy[node]["data"]:
                 temp_rec = get_rec(gid)
                 temp_seq = temp_rec.seq._data
-                print "%s: %d for %d sequences" % (node, len(temp_seq) / seq_len, seq_len)
+                # print "%s: %d for %d sequences" % (node, len(temp_seq) / seq_len, seq_len)
 
-                sum_100 += (len(temp_seq) / seq_len)
-                j = 0
-                while (j + 1) * seq_len < len(temp_seq):
-                    vector = list(temp_seq[(int)(j * seq_len): (int)((j + 1) * seq_len)])
-                    for n, e in enumerate(vector):
-                        if e == "A":
-                            vector[n] = 0.0
-                        elif e == "T":
-                            vector[n] = 0.33
-                        elif e == "C":
-                            vector[n] = 0.66
-                        elif e == "G":
-                            vector[n] = 1.0
-                        else:
-                            vector[n] = 0.5
-                            # ce je vrednost nepoznana naj bo enakmoerno oddaljena med 0 in 1
-                            # (ko bomo imel bite bi tukaj dal 0.25 na vse 4 vrednosti)
-                    train_data.append(vector)
-                    label.append(node)
-                    # j += 0.5
-                    j += 1
-            print "number of 100 long sequences for %s: %d" % (node, sum_100)
-            class_size.append((sum_100, node))
+                vector = list(temp_seq)
+                for n, e in enumerate(vector):
+                    if e == "A":
+                        vector[n] = 1
+                    elif e == "T":
+                        vector[n] = 2
+                    elif e == "C":
+                        vector[n] = 3
+                    elif e == "G":
+                        vector[n] = 4
+                    else:
+                        vector[n] = 5
+                        # ce je vrednost nepoznana naj bo enakmoerno oddaljena med 0 in 1
+                        # (ko bomo imel bite bi tukaj dal 0.25 na vse 4 vrednosti)
+                data.append(vector)
+                label.append(node)
+
+                # sum_100 += (len(temp_seq) / seq_len)
+                # j = 0
+                # while (j + 1) * seq_len < len(temp_seq):
+                #     vector = list(temp_seq[(int)(j * seq_len): (int)((j + 1) * seq_len)])
+                #     for n, e in enumerate(vector):
+                #         if e == "A":
+                #             vector[n] = 1
+                #         elif e == "T":
+                #             vector[n] = 2
+                #         elif e == "C":
+                #             vector[n] = 3
+                #         elif e == "G":
+                #             vector[n] = 4
+                #         else:
+                #             vector[n] = 5
+                #             # ce je vrednost nepoznana naj bo enakmoerno oddaljena med 0 in 1
+                #             # (ko bomo imel bite bi tukaj dal 0.25 na vse 4 vrednosti)
+                #     data.append(vector)
+                #     label.append(node)
+                #     # j += 0.5
+                #     j += 1
+            # print "number of 100 long sequences for %s: %d" % (node, sum_100)
+            # class_size.append((sum_100, node))
 
         else:
             build_data(taxonomy[node], seq_len)
+
+
+def save_obj(obj, name):
+    with open('media/' + name + '.pkl', 'wb') as f:
+        pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
+
 
 if __name__ == "__main__":
     # call: python get_viral_sequence.py>log.out 2>log.err
@@ -275,34 +275,40 @@ if __name__ == "__main__":
 
     print_nice(taxonomy)
 
-    simplify(taxonomy)
+    remove_lists(taxonomy)
 
     print_nice(taxonomy)
 
     print get_list_nodes(taxonomy)
 
-    build_data(taxonomy, 100)
+    build_data(taxonomy)
 
-    print len(train_data)
-    print len(label)
+    # save data to file
+    save_obj(data, "data")
+    save_obj(label, "labels")
 
-    print sorted(class_size)
+    # build_data(taxonomy, 100)
 
-    dir = "media"
-    if not os.path.isdir(dir):
-        os.makedirs(dir)
+    # print len(train_data)
+    # print len(label)
 
-    np.save('media/data1-100', train_data)
-    label_n = []
-    temp_l = []
-    label_number = 0
-    for l in label:
-        if l not in temp_l:
-            temp_l.append(l)
-            label_number += 1
-        label_n.append(label_number)
+    # print sorted(class_size)
 
-    np.save('media/labels1-100', label_n)
+    # dir = "media"
+    # if not os.path.isdir(dir):
+    #     os.makedirs(dir)
+    #
+    # np.save('media/data1-100', train_data)
+    # label_n = []
+    # temp_l = []
+    # label_number = 0
+    # for l in label:
+    #     if l not in temp_l:
+    #         temp_l.append(l)
+    #         label_number += 1
+    #     label_n.append(label_number)
+    #
+    # np.save('media/labels1-100', label_n)
 
     # with gzip.open('media/data3-100.gz', 'wb') as file:
     #     file.writelines('\t'.join(str(j) for j in i) + '\n' for i in train_data)
