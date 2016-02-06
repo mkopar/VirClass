@@ -59,7 +59,7 @@ downscale3=1
 
 def model(X, w, w2, w3, w4, p_drop_conv, p_drop_hidden):
     # TODO spremeni max_pool argumente
-    l1a = rectify(conv2d(X, w, border_mode='valid', subsample=(1, 1))) # stride along one (horizontal) dimension only
+    l1a = rectify(conv2d(X, w, border_mode='valid', subsample=(1, 4))) # stride along one (horizontal) dimension only
     l1 = max_pool_2d(l1a, (1, downscale1), st=(1, stride1)) # (1,1)=(vertical, horizontal) downscale, st=(1, step): move to every stride1 column and perform max_pooling there
     l1 = dropout(l1, p_drop_conv)
 
@@ -80,8 +80,7 @@ def model(X, w, w2, w3, w4, p_drop_conv, p_drop_hidden):
     pyx = softmax(T.dot(l4, w_o))
     return l1, l2, l3, l4, pyx
 
-num_of_classes = 104
-trX, teX, trY, teY = seq_load(number_of_classes=num_of_classes, onehot=True)
+trX, teX, trY, teY = seq_load(onehot=True)
 
 print(trX.shape)
 trX = trX.reshape(-1, 1, 1, 100)  # TODO spremeni argumente tukaj
@@ -138,4 +137,3 @@ for i in range(100):
     for start, end in zip(range(0, len(trX), 128), range(128, len(trX), 128)):
         cost = train(trX[start:end], trY[start:end])
     print np.mean(np.argmax(teY, axis=1) == predict(teX))
-
