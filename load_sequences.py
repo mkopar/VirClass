@@ -8,9 +8,11 @@ from Bio import SeqIO
 from collections import defaultdict
 import gzip
 
-dir = "cache"
+dir = "../Diploma/cache"
 if not os.path.isdir(dir):
-    os.makedirs(dir)
+    dir = "cache"
+    if not os.path.isdir(dir):
+        os.makedirs(dir)
 
 # all virus sequences
 # term = "Viruses[Organism] NOT srcdb_refseq[PROP] NOT cellular organisms[ORGN] AND nuccore genome samespecies[Filter] NOT nuccore genome[filter] NOT gbdiv syn[prop]"
@@ -246,8 +248,8 @@ def build_data(taxonomy, seq_len=100):
             build_data(taxonomy[node], seq_len)
 
 
-def save_obj(obj, name):
-    with open('media/' + name + '.pkl', 'wb') as f:
+def save_obj(dir, obj, name):
+    with open(dir + '/' + name + '.pkl.gz', 'wb') as f:
         pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
 
 
@@ -284,8 +286,20 @@ if __name__ == "__main__":
     build_data(taxonomy)
 
     # save data to file
-    save_obj(data, "data")
-    save_obj(label, "labels")
+    dir = "media"
+    if not os.path.isdir(dir):
+        os.makedirs(dir)
+    save_obj(dir, data, "data_raw")
+
+    label_n = []
+    temp_l = []
+    label_number = 0
+    for l in label:
+        if l not in temp_l:
+            temp_l.append(l)
+            label_number += 1
+        label_n.append(label_number)
+    save_obj(dir, label_n, "labels_raw")
 
     # build_data(taxonomy, 100)
 
