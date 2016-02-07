@@ -6,7 +6,7 @@ import pickle
 from Bio import Entrez
 from Bio import SeqIO
 from collections import defaultdict
-import gzip
+import ujson
 
 dir = "../Diploma/cache"
 if not os.path.isdir(dir):
@@ -191,7 +191,6 @@ def get_all_nodes(taxonomy, parent=""):
 
 data = []
 label = []
-class_size = []
 
 
 def build_data(taxonomy, seq_len=100):
@@ -249,11 +248,11 @@ def build_data(taxonomy, seq_len=100):
 
 
 def save_obj(dir, obj, name):
-    with open(dir + '/' + name + '.pkl.gz', 'wb') as f:
-        pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
+    with open(dir + '/' + name + '.pkl', 'wb') as f:
+        pickle.dump(obj, f, -1)
 
 
-if __name__ == "__main__":
+if "__main__":
     # call: python get_viral_sequence.py>log.out 2>log.err
 
     taxonomy = rec_dd()
@@ -286,10 +285,27 @@ if __name__ == "__main__":
     build_data(taxonomy)
 
     # save data to file
+    # dir = "media"
+    # if not os.path.isdir(dir):
+    #     os.makedirs(dir)
+    # save_obj(dir, data, "data_raw")
+    #
+    # label_n = []
+    # temp_l = []
+    # label_number = 0
+    # for l in label:
+    #     if l not in temp_l:
+    #         temp_l.append(l)
+    #         label_number += 1
+    #     label_n.append(label_number)
+    # save_obj(dir, label_n, "labels_raw")
+
     dir = "media"
     if not os.path.isdir(dir):
         os.makedirs(dir)
-    save_obj(dir, data, "data_raw")
+
+    with open('data_raw.txt', 'w') as outfile:
+        ujson.dump(data, outfile)
 
     label_n = []
     temp_l = []
@@ -299,30 +315,9 @@ if __name__ == "__main__":
             temp_l.append(l)
             label_number += 1
         label_n.append(label_number)
-    save_obj(dir, label_n, "labels_raw")
 
-    # build_data(taxonomy, 100)
-
-    # print len(train_data)
-    # print len(label)
-
-    # print sorted(class_size)
-
-    # dir = "media"
-    # if not os.path.isdir(dir):
-    #     os.makedirs(dir)
-    #
-    # np.save('media/data1-100', train_data)
-    # label_n = []
-    # temp_l = []
-    # label_number = 0
-    # for l in label:
-    #     if l not in temp_l:
-    #         temp_l.append(l)
-    #         label_number += 1
-    #     label_n.append(label_number)
-    #
-    # np.save('media/labels1-100', label_n)
+    with open('labels_raw.txt', 'w') as outfile:
+        ujson.dump(label_n, outfile)
 
     # with gzip.open('media/data3-100.gz', 'wb') as file:
     #     file.writelines('\t'.join(str(j) for j in i) + '\n' for i in train_data)
