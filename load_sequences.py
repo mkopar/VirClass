@@ -269,9 +269,9 @@ def get_taxonomy():
             if not in_filter:
                 update_taxonomy(taxonomy, rec.annotations["taxonomy"], rec)
 
-            if count == 200:
-                break
-            count += 1
+            # if count == 200:
+            #     break
+            # count += 1
         except Exception as e:
             print("problems...")
             print e
