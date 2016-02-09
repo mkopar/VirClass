@@ -1,30 +1,16 @@
 __author__ = 'Matej'
 
-import numpy as np
 import os
 import pickle
 from Bio import Entrez
 from Bio import SeqIO
 from collections import defaultdict
-import ujson
 
 dir = "../Diploma/cache"
 if not os.path.isdir(dir):
     dir = "cache"
     if not os.path.isdir(dir):
         os.makedirs(dir)
-
-# all virus sequences
-# term = "Viruses[Organism] NOT srcdb_refseq[PROP] NOT cellular organisms[ORGN] AND nuccore genome samespecies[Filter] NOT nuccore genome[filter] NOT gbdiv syn[prop]"
-# only reference (refSEQ) virues sequences
-# see distinction between the two, here:
-# http://www.ncbi.nlm.nih.gov/genomes/GenomesHome.cgi?taxid=10239&hopt=faq
-
-term = "Viruses[Organism] AND srcdb_refseq[PROP] AND complete_genome"
-handle = Entrez.esearch(db="nucleotide", term=term, retmax=100000)
-record = Entrez.read(handle)
-id_list = sorted(set(record["IdList"]))
-print(record["Count"], len(record["IdList"]), len(id_list))
 
 
 def get_rec(rec_ID):
@@ -83,9 +69,9 @@ def update_taxonomy(taxonomy, tax_path, seq_record):
     return taxonomy
 
 
-def check_taxonomy_filter(taxonomy_name, to_filter):
+def check_taxonomy_filter(rec, to_filter):
     in_to_filter = False
-    for temp_tax in taxonomy_name:
+    for temp_tax in rec.annotations["taxonomy"]:
         temp_tax = temp_tax.lower().split()
         for temp_tax_el in temp_tax:
             if temp_tax_el in to_filter:
@@ -151,22 +137,23 @@ def count_examples(taxonomy):
     return count
 
 
-def get_list_nodes(taxonomy, parent=""):
+def get_list_nodes_unique(taxonomy, parent=""):
     # preverjeno na roke in dela
     list_nodes = list()
     keys = [x for x in taxonomy.keys() if x != "data"]
     for i in keys:
         if set(taxonomy[i]) == set(list({"data"})):
             #list_nodes.append((i, parent, taxonomy[i]))
-            if i == keys[-1]:
-                # list_nodes.append((i, parent, taxonomy[i]))
-                list_nodes.append((i, parent))
-                return list_nodes
-            else:
-                # list_nodes.append((i, parent, taxonomy[i]))
-                list_nodes.append((i, parent))
+            # if i == keys[-1]:
+            #     # list_nodes.append((i, parent, taxonomy[i]))
+            #     list_nodes.append((i, parent))
+            #     return list_nodes
+            # else:
+            #     # list_nodes.append((i, parent, taxonomy[i]))
+            #     list_nodes.append((i, parent))
+            list_nodes.append(i)
         else:
-            list_nodes += get_list_nodes(taxonomy[i], parent + "->" + i)
+            list_nodes += get_list_nodes_unique(taxonomy[i], parent + "->" + i)
     return list_nodes
 
 
@@ -191,6 +178,7 @@ def get_all_nodes(taxonomy, parent=""):
 
 data = []
 label = []
+gids = []
 
 
 def build_data(taxonomy, seq_len=100):
@@ -200,7 +188,7 @@ def build_data(taxonomy, seq_len=100):
             for gid in taxonomy[node]["data"]:
                 temp_rec = get_rec(gid)
                 temp_seq = temp_rec.seq._data
-                # print "%s: %d for %d sequences" % (node, len(temp_seq) / seq_len, seq_len)
+                gids.append(gid)
 
                 vector = list(temp_seq)
                 for n, e in enumerate(vector):
@@ -247,42 +235,77 @@ def build_data(taxonomy, seq_len=100):
             build_data(taxonomy[node], seq_len)
 
 
-def save_obj(dir, obj, name):
-    with open(dir + '/' + name + '.pkl', 'wb') as f:
-        pickle.dump(obj, f, -1)
+def get_list_nodes_ids_labels(d, parent=""):
+    if len(d.keys()) > 1 or d.keys() == ["viruses"]:
+        temp = []
+        for k in [x for x in d.keys() if x != "data"]:
+            temp += get_list_nodes_ids_labels(d[k], k)
+        return temp
+    else:
+        return [(x, parent) for x in d["data"]]
 
 
-if "__main__":
+def get_taxonomy():
     # call: python get_viral_sequence.py>log.out 2>log.err
+
+    # all virus sequences
+    # term = "Viruses[Organism] NOT srcdb_refseq[PROP] NOT cellular organisms[ORGN] AND nuccore genome samespecies[Filter] NOT nuccore genome[filter] NOT gbdiv syn[prop]"
+    # only reference (refSEQ) virues sequences
+    # see distinction between the two, here:
+    # http://www.ncbi.nlm.nih.gov/genomes/GenomesHome.cgi?taxid=10239&hopt=faq
+
+    term = "Viruses[Organism] AND srcdb_refseq[PROP] AND complete_genome"
+    handle = Entrez.esearch(db="nucleotide", term=term, retmax=100000)
+    record = Entrez.read(handle)
+    id_list = sorted(set(record["IdList"]))
+    print(record["Count"], len(record["IdList"]), len(id_list))
 
     taxonomy = rec_dd()
     count = 0
     for genome_id in id_list:
         try:
             rec = get_rec(genome_id)
-            in_filter = check_taxonomy_filter(rec.annotations["taxonomy"], list({"bacteria", "unclassified", "unassigned"}))
+            in_filter = check_taxonomy_filter(rec, list({"bacteria", "unclassified", "unassigned"}))
             if not in_filter:
                 update_taxonomy(taxonomy, rec.annotations["taxonomy"], rec)
 
-            # if count == 20:
+            # if count == 200:
             #     break
             # count += 1
         except Exception as e:
             print("problems...")
             print e
 
+    return taxonomy
+
+
+def run():
+    taxonomy = get_taxonomy()
+    remove_lists(taxonomy)
+    list_nodes = get_list_nodes_ids_labels(taxonomy)
+    data = [get_rec(x).seq._data for x, _ in list_nodes]
+
+    labels = [y for _, y in list_nodes]
+    label_number = 0
+    temp_l = []
+    label_n = []
+    for l in labels:
+        if l not in temp_l:
+            temp_l.append(l)
+            label_number += 1
+        label_n.append(label_number)
+
+    return data, labels
+
+
+def main_run():
+    taxonomy = get_taxonomy()
     print "no of examples after taxonomy was built: %d" % count_examples(taxonomy)
     print "no of list nodes after taxonomy was built: %d" % count_list_nodes(taxonomy)
-
     print_nice(taxonomy)
-
     remove_lists(taxonomy)
-
     print_nice(taxonomy)
-
-    print get_list_nodes(taxonomy)
-
-    build_data(taxonomy)
+    run()
 
     # save data to file
     # dir = "media"
@@ -300,24 +323,24 @@ if "__main__":
     #     label_n.append(label_number)
     # save_obj(dir, label_n, "labels_raw")
 
-    dir = "media"
-    if not os.path.isdir(dir):
-        os.makedirs(dir)
-
-    with open('data_raw.txt', 'w') as outfile:
-        ujson.dump(data, outfile)
-
-    label_n = []
-    temp_l = []
-    label_number = 0
-    for l in label:
-        if l not in temp_l:
-            temp_l.append(l)
-            label_number += 1
-        label_n.append(label_number)
-
-    with open('labels_raw.txt', 'w') as outfile:
-        ujson.dump(label_n, outfile)
+    # dir = "media"
+    # if not os.path.isdir(dir):
+    #     os.makedirs(dir)
+    #
+    # with open('data_raw.txt', 'w') as outfile:
+    #     ujson.dump(data, outfile)
+    #
+    # label_n = []
+    # temp_l = []
+    # label_number = 0
+    # for l in label:
+    #     if l not in temp_l:
+    #         temp_l.append(l)
+    #         label_number += 1
+    #     label_n.append(label_number)
+    #
+    # with open('labels_raw.txt', 'w') as outfile:
+    #     ujson.dump(label_n, outfile)
 
     # with gzip.open('media/data3-100.gz', 'wb') as file:
     #     file.writelines('\t'.join(str(j) for j in i) + '\n' for i in train_data)
@@ -337,3 +360,6 @@ if "__main__":
     # for i in label:
     #     p.stdin.writelines(i + '\n')
     # p.communicate()  # Finish writing data and wait for subprocess to finish
+
+
+# main_run()

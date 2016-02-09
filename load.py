@@ -4,6 +4,7 @@ import random
 import numpy as np
 import os
 import sys
+from load_sequences import run
 
 datasets_dir = 'media/datasets/'
 
@@ -17,52 +18,20 @@ def one_hot(x, n):
     return o_h
 
 
-def get_labels(filename):
-    l = []
-    n_l = []
-    i = 0
-    with gzip.open(filename, 'rb') as f:
-        for line in f:
-            if line not in l:
-                l.append(line)
-                i += 1
-            n_l.append(i)
-    return n_l
-
-
-def read_file(filename):
-    temp = []
-    with gzip.open(filename, 'rb') as f:
-        for line in f:
-            try:
-                temp.append(np.array(map(float, str.split(line, '\t'))))
-            except Exception as e:
-                print e
-                return
-    return np.array(temp)
-
-
-def load_obj(dir, name):
-    with open(dir + '/' + name + '.pkl.gz', 'rb') as f:
-        return pickle.load(f)
-
-
-def seq_to_bits(seq):
-    vector = []
-    for n, e in enumerate(seq):
-        if e == "A":
-            vector += [1, 0, 0, 0]
-        elif e == "T":
-            vector += [0, 1, 0, 0]
-        elif e == "C":
-            vector += [0, 0, 1, 0]
-        elif e == "G":
-            vector += [0, 0, 0, 1]
+def seq_to_bits(vec):
+    bits_vector = []
+    for i, c in enumerate(vec):
+        if c == "A":
+            bits_vector += [1, 0, 0, 0]
+        elif c == "T":
+            bits_vector += [0, 1, 0, 0]
+        elif c == "C":
+            bits_vector += [0, 0, 1, 0]
+        elif c == "G":
+            bits_vector += [0, 0, 0, 1]
         else:
-            vector += [1, 1, 1, 1]
-
-    assert len(vector) == 4*len(seq)
-    return vector
+            bits_vector += [1, 1, 1, 1]
+    return bits_vector
 
 
 def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.maxint)):
@@ -79,8 +48,7 @@ def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.
         teX = pickle.load(open(dir + "/t10k-data-seed_%d.pkl.gz" % seed, "rb"))
         teY = pickle.load(open(dir + "/t10k-labels-seed_%d.pkl.gz" % seed, "rb"))
     except IOError:  # , FileNotFoundError:
-        data = load_obj(dir, "data_raw")
-        labels = load_obj(dir, "labels_raw")
+        data, labels = run()
 
         number_of_classes = len(labels)
         train_examples_per_class = ntrain / number_of_classes
@@ -100,8 +68,9 @@ def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.
             print "sum lengths of genomes: %d" % sum(len(s) for s in data)
             while temp_count < examples_per_class:
                 vir_idx     = random.choice(range(first, last))  # nakljucno izberi virus iz razreda
-                sample_idx  = data[vir_idx].choice(range(0, len(data[vir_idx]) - seq_len))  # nakljucno vzorci virus
+                sample_idx  = data[vir_idx].choice(range(0, (len(data[vir_idx]) / 4) - seq_len))  # nakljucno vzorci virus
 
+                # tukaj dobimo podatke ze v bitih! --> popravi da bo delal
                 if temp_count < train_examples_per_class:
                     trX.append(seq_to_bits(data[vir_idx][sample_idx]))
                     trY.append(label)
@@ -209,3 +178,35 @@ def mnist(ntrain=60000, ntest=10000, onehot=True):
         teY = np.asarray(teY)
 
     return trX, teX, trY, teY
+
+
+### not used ###
+
+def get_labels(filename):
+    l = []
+    n_l = []
+    i = 0
+    with gzip.open(filename, 'rb') as f:
+        for line in f:
+            if line not in l:
+                l.append(line)
+                i += 1
+            n_l.append(i)
+    return n_l
+
+
+def read_file(filename):
+    temp = []
+    with gzip.open(filename, 'rb') as f:
+        for line in f:
+            try:
+                temp.append(np.array(map(float, str.split(line, '\t'))))
+            except Exception as e:
+                print e
+                return
+    return np.array(temp)
+
+
+def load_obj(dir, name):
+    with open(dir + '/' + name + '.pkl', 'rb') as f:
+        return pickle.load(f)
