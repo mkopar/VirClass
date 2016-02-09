@@ -74,8 +74,11 @@ def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.
         print "train and test data not found for seed %d..." % seed
         print "generating train and test data..."
         number_of_classes = len(set(labels))
-        train_examples_per_class = ceil(ntrain / number_of_classes)
-        test_examples_per_class = ceil(ntest / number_of_classes)
+        # train_examples_per_class = int(ceil(ntrain / float(number_of_classes)))
+        # test_examples_per_class = int(ceil(ntest / float(number_of_classes)))
+        # popravi da se bo v trX vstavljalo zaporedoma za vsak label
+        train_examples_per_class = ntrain / number_of_classes
+        test_examples_per_class = ntest / number_of_classes
         examples_per_class = train_examples_per_class + test_examples_per_class
 
         trX = []
@@ -88,7 +91,13 @@ def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.
             first = labels.index(label)
             last = len(labels) - labels[::-1].index(label)
             print "number of examples in class: %d" % (last - first)
-            print "sum lengths of genomes: %d" % sum(len(s) for s in data[first:last])
+
+            sum_lengths = sum(len(s) for s in data[first:last])
+            print "sum lengths of genomes: %d" % sum_lengths
+
+            if sum_lengths < (ntrain+ntest) * 0.05:
+                print "sum lengths of genomes less than 5\% of "
+
             while temp_count < examples_per_class:
                 vir_idx     = random.choice(range(first, last))  # nakljucno izberi virus iz razreda
                 sample_idx  = random.choice(range(0, (len(data[vir_idx])) - seq_len - 1))  # nakljucno vzorci virus
