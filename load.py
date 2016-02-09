@@ -124,13 +124,13 @@ def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.
     print len(teX)
 
     if onehot:
-        trY = np.asarray(one_hot(trY, number_of_classes))
-        teY = np.asarray(one_hot(teY, number_of_classes))
+        trY = one_hot(trY, number_of_classes)
+        teY = one_hot(teY, number_of_classes)
     else:
         trY = np.asarray(trY)
         teY = np.asarray(teY)
 
-    return trX, teX, trY, teY, number_of_classes
+    return np.asarray(trX), np.asarray(teX), np.asarray(trY), np.asarray(teY), number_of_classes
 
     # data = np.load('media/data1-100.npy')
     # labels = np.load('media/labels1-100.npy')
