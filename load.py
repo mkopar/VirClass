@@ -5,6 +5,7 @@ import numpy as np
 import os
 import sys
 from load_sequences import run
+from load_sequences import get_rec
 
 datasets_dir = 'media/datasets/'
 
@@ -34,6 +35,10 @@ def seq_to_bits(vec):
     return bits_vector
 
 
+def load_seqs(ids):
+    return [get_rec(x).seq._data for x in ids]  # nalozi sekvence
+
+
 def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.maxint)):
 
     seq_len = 100
@@ -41,16 +46,33 @@ def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.
     # nastavi seed
     random.seed(seed)
 
+    # preveri ce obstaja datoteka s podatki o taxonomy (samo id-ji in labeli), ce ne obstaja pozeni run in shrani
+
     dir = "media"
     try:
+        print "loading data and labels..."
+        data = pickle.load(open(dir + "/data-ids.pkl.gz", "rb"))
+        labels = pickle.load(open(dir + "/labels.pkl.gz", "rb"))
+    except IOError:
+        print "data and labels not found...\ngenerating data and labels..."
+        data, labels = run()
+        print "saving data and labels..."
+        pickle.dump(data, open(dir + "/data-ids.pkl.gz", "wb"), -1)
+        pickle.dump(labels, open(dir + "/labels.pkl.gz", "wb"), -1)
+
+    print "getting sequences..."
+    data = load_seqs(data)
+
+    try:
+        print "loading train and test data for seed %d..." % seed
         trX = pickle.load(open(dir + "/train-data-seed_%d.pkl.gz" % seed, "rb"))
         trY = pickle.load(open(dir + "/train-labels-seed_%d.pkl.gz" % seed, "rb"))
         teX = pickle.load(open(dir + "/t10k-data-seed_%d.pkl.gz" % seed, "rb"))
         teY = pickle.load(open(dir + "/t10k-labels-seed_%d.pkl.gz" % seed, "rb"))
     except IOError:  # , FileNotFoundError:
-        data, labels = run()
-
-        number_of_classes = len(labels)
+        print "train and test data not found for seed %d..." % seed
+        print "generating train and test data..."
+        number_of_classes = len(set(labels))
         train_examples_per_class = ntrain / number_of_classes
         test_examples_per_class = ntest / number_of_classes
         examples_per_class = train_examples_per_class + test_examples_per_class
@@ -65,28 +87,28 @@ def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.
             first = labels.index(label)
             last = len(labels) - labels[::-1].index(label)
             print "number of examples in class: %d" % (last - first)
-            print "sum lengths of genomes: %d" % sum(len(s) for s in data)
+            print "sum lengths of genomes: %d" % sum(len(s) for s in data[first:last])
             while temp_count < examples_per_class:
                 vir_idx     = random.choice(range(first, last))  # nakljucno izberi virus iz razreda
-                sample_idx  = data[vir_idx].choice(range(0, (len(data[vir_idx]) / 4) - seq_len))  # nakljucno vzorci virus
+                sample_idx  = random.choice(range(0, (len(data[vir_idx])) - seq_len - 1))  # nakljucno vzorci virus
 
-                # tukaj dobimo podatke ze v bitih! --> popravi da bo delal
                 if temp_count < train_examples_per_class:
-                    trX.append(seq_to_bits(data[vir_idx][sample_idx]))
+                    trX.append(seq_to_bits(data[vir_idx][sample_idx:sample_idx + seq_len]))
                     trY.append(label)
                 else:
-                    teX.append(seq_to_bits(data[vir_idx][sample_idx]))
+                    teX.append(seq_to_bits(data[vir_idx][sample_idx:sample_idx + seq_len]))
                     teY.append(label)
 
                 temp_count += 1
 
+        print "saving train and test data for seed %d..." % seed
         pickle.dump(trX, open(dir + "/train-data-seed_%d.pkl.gz" % seed, "wb"), -1)
         pickle.dump(trY, open(dir + "/train-labels-seed_%d.pkl.gz" % seed, "wb"), -1)
         pickle.dump(teX, open(dir + "/t10k-data-seed_%d.pkl.gz" % seed, "wb"), -1)
         pickle.dump(teY, open(dir + "/t10k-labels-seed_%d.pkl.gz" % seed, "wb"), -1)
 
 
-    number_of_classes = len(labels)
+    number_of_classes = len(set(labels))
 
     if onehot:
         trY = one_hot(trY, number_of_classes)
