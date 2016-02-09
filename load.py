@@ -1,4 +1,5 @@
 import gzip
+from math import ceil
 import pickle
 import random
 import numpy as np
@@ -73,8 +74,8 @@ def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.
         print "train and test data not found for seed %d..." % seed
         print "generating train and test data..."
         number_of_classes = len(set(labels))
-        train_examples_per_class = ntrain / number_of_classes
-        test_examples_per_class = ntest / number_of_classes
+        train_examples_per_class = ceil(ntrain / number_of_classes)
+        test_examples_per_class = ceil(ntest / number_of_classes)
         examples_per_class = train_examples_per_class + test_examples_per_class
 
         trX = []
@@ -108,8 +109,10 @@ def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.
         pickle.dump(teY, open(dir + "/t10k-labels-seed_%d.pkl.gz" % seed, "wb"), -1)
         print "saving done"
 
+    number_of_classes = len(set(labels))
 
-    number_of_classes = len(set(labels)) - 1
+    print len(trX)
+    print len(teX)
 
     if onehot:
         trY = one_hot(trY, number_of_classes)
