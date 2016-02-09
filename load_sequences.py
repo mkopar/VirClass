@@ -269,9 +269,9 @@ def get_taxonomy():
             if not in_filter:
                 update_taxonomy(taxonomy, rec.annotations["taxonomy"], rec)
 
-            # if count == 200:
-            #     break
-            # count += 1
+            if count == 200:
+                break
+            count += 1
         except Exception as e:
             print("problems...")
             print e
@@ -283,8 +283,7 @@ def run():
     taxonomy = get_taxonomy()
     remove_lists(taxonomy)
     list_nodes = get_list_nodes_ids_labels(taxonomy)
-    data = [get_rec(x).seq._data for x, _ in list_nodes]
-
+    data = [x for x, _ in list_nodes]
     labels = [y for _, y in list_nodes]
     label_number = 0
     temp_l = []
@@ -295,7 +294,7 @@ def run():
             label_number += 1
         label_n.append(label_number)
 
-    return data, labels
+    return data, label_n
 
 
 def main_run():
