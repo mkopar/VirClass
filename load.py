@@ -106,9 +106,10 @@ def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.
         pickle.dump(trY, open(dir + "/train-labels-seed_%d.pkl.gz" % seed, "wb"), -1)
         pickle.dump(teX, open(dir + "/t10k-data-seed_%d.pkl.gz" % seed, "wb"), -1)
         pickle.dump(teY, open(dir + "/t10k-labels-seed_%d.pkl.gz" % seed, "wb"), -1)
+        print "saving done"
 
 
-    number_of_classes = len(set(labels))
+    number_of_classes = len(set(labels)) - 1
 
     if onehot:
         trY = one_hot(trY, number_of_classes)
