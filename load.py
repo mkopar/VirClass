@@ -118,7 +118,7 @@ def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.
                     trX.append(seq_to_bits(data[vir_idx][sample_idx:sample_idx + seq_len]))
                     trY.append(label)
                 else:
-                    if temp_count - ntrain > ntest:
+                    if temp_count - ntrain >= ntest:
                         break
                     teX.append(seq_to_bits(data[vir_idx][sample_idx:sample_idx + seq_len]))
                     teY.append(label)
