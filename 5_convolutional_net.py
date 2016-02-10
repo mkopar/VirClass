@@ -59,7 +59,7 @@ downscale3=1
 
 def model(X, w, w2, w3, w4, p_drop_conv, p_drop_hidden):
     # TODO spremeni max_pool argumente
-    l1a = rectify(conv2d(X, w, border_mode='valid', subsample=(1, 1))) # stride along one (horizontal) dimension only
+    l1a = rectify(conv2d(X, w, border_mode='valid', subsample=(4, 1))) # stride along one (horizontal) dimension only
     l1 = max_pool_2d(l1a, (1, downscale1), st=(1, stride1)) # (1,1)=(vertical, horizontal) downscale, st=(1, step): move to every stride1 column and perform max_pooling there
     l1 = dropout(l1, p_drop_conv)
 
