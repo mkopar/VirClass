@@ -35,6 +35,20 @@ def seq_to_bits(vec):
             bits_vector += [1, 1, 1, 1]
     return bits_vector
 
+    # for i, c in enumerate(vec):
+    #     if c == "A":
+    #         bits_vector.append(0)
+    #     elif c == "T":
+    #         bits_vector.append(0.33)
+    #     elif c == "C":
+    #         bits_vector.append(0.66)
+    #     elif c == "G":
+    #         bits_vector.append(1)
+    #     else:
+    #         bits_vector.append(0.5)
+    # return bits_vector
+
+
 
 def load_seqs(ids):
     return [get_rec(x).seq._data for x in ids]  # nalozi sekvence
@@ -86,23 +100,21 @@ def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.
         teX = []
         teY = []
 
-        for label in set(labels):
-            temp_count = 0
-            first = labels.index(label)
-            last = len(labels) - labels[::-1].index(label)
-            print "number of examples in class: %d" % (last - first)
+        temp_count = 0
 
-            sum_lengths = sum(len(s) for s in data[first:last])
-            print "sum lengths of genomes: %d" % sum_lengths
+        while temp_count < (ntrain + ntest):
+            for label in set(labels):
+                first = labels.index(label)
+                last = len(labels) - labels[::-1].index(label)
+                print "number of examples in class: %d" % (last - first)
 
-            if sum_lengths < (ntrain+ntest) * 0.05:
-                print "sum lengths of genomes less than 5\% of "
+                sum_lengths = sum(len(s) for s in data[first:last])
+                print "sum lengths of genomes: %d" % sum_lengths
 
-            while temp_count < examples_per_class:
                 vir_idx     = random.choice(range(first, last))  # nakljucno izberi virus iz razreda
                 sample_idx  = random.choice(range(0, (len(data[vir_idx])) - seq_len - 1))  # nakljucno vzorci virus
 
-                if temp_count < train_examples_per_class:
+                if temp_count < ntrain:
                     trX.append(seq_to_bits(data[vir_idx][sample_idx:sample_idx + seq_len]))
                     trY.append(label)
                 else:
