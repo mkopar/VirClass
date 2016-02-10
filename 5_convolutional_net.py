@@ -59,7 +59,7 @@ downscale3=1
 
 def model(X, w, w2, w3, w4, p_drop_conv, p_drop_hidden):
     # TODO spremeni max_pool argumente
-    l1a = rectify(conv2d(X, w, border_mode='valid', subsample=(4, 1))) # stride along one (horizontal) dimension only
+    l1a = rectify(conv2d(X, w, border_mode='valid', subsample=(1, 4))) # stride along one (horizontal) dimension only
     l1 = max_pool_2d(l1a, (1, downscale1), st=(1, stride1)) # (1,1)=(vertical, horizontal) downscale, st=(1, step): move to every stride1 column and perform max_pooling there
     l1 = dropout(l1, p_drop_conv)
 
@@ -83,14 +83,18 @@ def model(X, w, w2, w3, w4, p_drop_conv, p_drop_hidden):
 trX, teX, trY, teY, num_of_classes = seq_load(onehot=True)
 
 print(trX.shape)
-trX = trX.reshape(-1, 1, 1, 100)  # TODO spremeni argumente tukaj
-teX = teX.reshape(-1, 1, 1, 100)
+# TODO spremeni argumente tukaj!!! (400?)
+# trX = trX.reshape(-1, 1, 1, 100)
+# teX = teX.reshape(-1, 1, 1, 100)
+trX = trX.reshape(-1, 1, 1, 400)
+teX = teX.reshape(-1, 1, 1, 400)
 
 X = T.ftensor4()
 Y = T.fmatrix()
 
 # size of convolution windows, for each layer different values can be used
 cwin1=6
+# cwin1 = 24
 cwin2=5
 cwin3=3
 num_filters_1=32 # how many different filters to lear at each layer
@@ -101,9 +105,13 @@ w2 = init_weights((num_filters_2, num_filters_1, 1, cwin2)) # second convolution
 w3 = init_weights((num_filters_3, num_filters_2, 1, cwin3)) # third convolution, 128 filters, stack size 64 (one stack for each filter from previous layes), 1 row, cwin3 columns
 
 # expected
+# TODO popravi es (najbrz mora bit 400) in nato se ostale formule
+
 es = 100
+# es = 400
 # l1 conv:
-es = (es - cwin1 + 1)
+# es = (es - cwin1 + 1)
+es = (es * 4 - cwin1 * 4 + 1 * 4) / 4
 # l1 max_pool:
 es = DownsampleFactorMax.out_shape((1, es), (1, downscale1), st=(1, stride1))[1]
 
