@@ -283,8 +283,7 @@ def run():
     taxonomy = get_taxonomy()
     remove_lists(taxonomy)
     list_nodes = get_list_nodes_ids_labels(taxonomy)
-    data = [x for x, _ in list_nodes]
-    labels = [y for _, y in list_nodes]
+    data, labels = zip(*list_nodes)
     label_number = -1
     temp_l = []
     label_n = []
