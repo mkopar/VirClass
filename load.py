@@ -2,11 +2,14 @@ import gzip
 from math import ceil
 import pickle
 import random
+import math
 import numpy as np
 import os
 import sys
 from load_sequences import run
 from load_sequences import get_rec
+import matplotlib.pyplot as plt
+import pylab as P
 
 datasets_dir = 'media/datasets/'
 
@@ -49,9 +52,20 @@ def seq_to_bits(vec):
     # return bits_vector
 
 
-
 def load_seqs(ids):
     return [get_rec(x).seq._data for x in ids]  # nalozi sekvence
+
+
+def histogram(values, name):
+    """Draw histogram for given values and save it with given name."""
+    print max(values)
+    bins = np.arange(0, 5000000, 250000)
+    P.hist(values, bins, histtype='bar', rwidth=0.8, log=True)
+    plt.tight_layout()
+    ylims = P.ylim()
+    P.ylim((0.1, ylims[1]))
+    plt.savefig(name)
+    plt.clf()
 
 
 def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.maxint)):
@@ -102,14 +116,35 @@ def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.
 
         temp_count = 0
 
-        while temp_count < (ntrain + ntest):
-            for label in set(labels):
-                first = labels.index(label)
-                last = len(labels) - labels[::-1].index(label)
-                print "number of examples in class: %d" % (last - first)
+        labels_to_process = []
+        examples_in_class = []
+        labels_lengths = []
+        smaller = []
+        for label in set(labels):
+            first = labels.index(label)
+            last = len(labels) - labels[::-1].index(label)
+            print "number of examples in class: %d" % (last - first)
 
-                sum_lengths = sum(len(s) for s in data[first:last])
-                print "sum lengths of genomes: %d" % sum_lengths
+            sum_lengths = sum(len(s) for s in data[first:last])
+            print "sum lengths of genomes: %d" % sum_lengths
+
+            examples_in_class.append((last-first, sum_lengths))
+            labels_lengths.append((sum_lengths, last-first))
+
+            threshold = 0.1 * examples_per_class * seq_len
+            if sum_lengths > 0.1 * (examples_per_class * seq_len):
+                labels_to_process.append((label, first, last))
+            else:
+                smaller.append(label)
+
+        print "labels which sum of genome lengths are smaller than %d:" % threshold, smaller
+        # histogram(labels_lengths, "class_genome_lengths.png")
+        # print sorted(examples_in_class)
+        # print sorted(labels_lengths)
+        # return 0
+
+        while temp_count < (ntrain + ntest):
+            for label, first, last in labels_to_process:
 
                 vir_idx     = random.choice(range(first, last))  # nakljucno izberi virus iz razreda
                 sample_idx  = random.choice(range(0, (len(data[vir_idx])) - seq_len - 1))  # nakljucno vzorci virus
@@ -151,6 +186,7 @@ def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.
     #
     # tr_idx = []
     # te_idx = []
+    #
     #
     # train_examples_per_class = ntrain / number_of_classes
     # test_examples_per_class = ntest / number_of_classes
