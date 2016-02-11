@@ -111,7 +111,7 @@ w3 = init_weights((num_filters_3, num_filters_2, 1, cwin3)) # third convolution,
 
 # expected
 # es = 100
-es = trX.shape[1] / conv1_stride
+es = trX.shape[3] / conv1_stride
 # l1 conv:
 es = (es - cwin1 + 1)
 # l1 max_pool:
