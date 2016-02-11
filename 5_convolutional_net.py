@@ -20,7 +20,7 @@ def init_weights(shape):
     return theano.shared(floatX(np.random.randn(*shape) * 0.01))
 
 def rectify(X):
-    print "rectify", X.shape
+    print "rectify", T.shape(X)
     return T.maximum(X, 0.)
 
 def softmax(X):
