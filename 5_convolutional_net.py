@@ -85,8 +85,8 @@ def model(X, w, w2, w3, w4, p_drop_conv, p_drop_hidden):
     pyx = softmax(T.dot(l4, w_o))
     return l1, l2, l3, l4, pyx
 
-# trX, teX, trY, teY, num_of_classes = seq_load(onehot=True, seed=7970223320302509880)
-trX, teX, trY, teY, num_of_classes = seq_load(onehot=True)
+trX, teX, trY, teY, num_of_classes = seq_load(onehot=True, seed=7970223320302509880)
+# trX, teX, trY, teY, num_of_classes = seq_load(onehot=True)
 
 print(trX.shape)
 # TODO spremeni argumente tukaj
