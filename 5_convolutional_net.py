@@ -128,8 +128,8 @@ print "l2 es:", es
 es = (es - cwin3 + 1)
 # l3 max_pool:
 es = DownsampleFactorMax.out_shape((1, es), (1, downscale3), st=(1, stride3))[1]
-
 print "l3 es:", es
+
 w4 = init_weights((num_filters_3 * es, 500))  # fully conected last layer, connects the outputs of 128 filters to 500 (arbitrary) hidden nodes, which are then connected to the output nodes
 w_o = init_weights((500, num_of_classes))  # stevilo koncnih razredov
 
