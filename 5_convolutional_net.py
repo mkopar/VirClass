@@ -20,6 +20,7 @@ def init_weights(shape):
     return theano.shared(floatX(np.random.randn(*shape) * 0.01))
 
 def rectify(X):
+    print "rectify", X.shape
     return T.maximum(X, 0.)
 
 def softmax(X):
@@ -99,11 +100,8 @@ Y = T.fmatrix()
 
 # size of convolution windows, for each layer different values can be used
 cwin1=6  # 5 ali 6 nukleotidov da dobimo vzorce ki so dovolj redki da so uporabni
-# cwin1 *= 4
 cwin2=5
-# cwin2 *= 4
 cwin3=3
-# cwin3 *= 4
 
 num_filters_1=32 # how many different filters to lear at each layer
 num_filters_2=48
@@ -116,24 +114,21 @@ w3 = init_weights((num_filters_3, num_filters_2, 1, cwin3)) # third convolution,
 # TODO popravi es (najbrz mora bit 400) in nato se ostale formule
 
 # expected
-# es = 100
-es = trX.shape[1]
+es = 100
+# es = trX.shape[1]
 # l1 conv:
-# es = (es - cwin1 + 1)
-es = int(math.ceil((es - cwin1 + 1) / 4))  # ??
-# es = int(math.ceil((es - cwin1 + 4) / 4))
+es = (es - cwin1 + 1)
+# es = int(math.ceil((es - cwin1 + 1) / 4))  # ?? mogoce +4?
 # l1 max_pool:
 es = DownsampleFactorMax.out_shape((1, es), (1, downscale1), st=(1, stride1))[1]
 
 # l2 conv:
 es = (es - cwin2 + 1)
-# es = int(math.ceil((es - cwin2 + 4) / 4))
 # l2 max_pool:
 es = DownsampleFactorMax.out_shape((1, es), (1, downscale2), st=(1, stride2))[1]
 
 # l3 conv:
 es = (es - cwin3 + 1)
-# es = int(math.ceil((es - cwin3 + 4) / 4))
 # l3 max_pool:
 es = DownsampleFactorMax.out_shape((1, es), (1, downscale3), st=(1, stride3))[1]
 
