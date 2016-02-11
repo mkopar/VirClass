@@ -88,17 +88,18 @@ trX, teX, trY, teY, num_of_classes = seq_load(onehot=True, seed=7970223320302509
 # trX, teX, trY, teY, num_of_classes = seq_load(onehot=True)
 
 print(trX.shape)
+input_len = trX.shape[1]
 # TODO spremeni argumente tukaj
 # trX = trX.reshape(-1, 1, 1, 100)
 # teX = teX.reshape(-1, 1, 1, 100)
-trX = trX.reshape(-1, 1, 1, trX.shape[1])
-teX = teX.reshape(-1, 1, 1, trX.shape[1])
+trX = trX.reshape(-1, 1, 1, input_len)
+teX = teX.reshape(-1, 1, 1, input_len)
 
 X = T.ftensor4()
 Y = T.fmatrix()
 
 # size of convolution windows, for each layer different values can be used
-cwin1=6  # 5 ali 6 nukleotidov da dobimo vzorce ki so dovolj redki da so uporabni
+cwin1=4*6  # veckratnik stevila 4, sicer spodnja formula za "l1 es" ne drzi vedno,  5 ali 6 nukleotidov da dobimo vzorce ki so dovolj redki da so uporabni
 cwin2=5
 cwin3=3
 
@@ -111,9 +112,10 @@ w3 = init_weights((num_filters_3, num_filters_2, 1, cwin3)) # third convolution,
 
 # expected
 # es = 100
-es = trX.shape[3] / conv1_stride
 # l1 conv:
+es = input_len
 es = (es - cwin1 + 1)
+es = es / conv1_stride
 # l1 max_pool:
 es = DownsampleFactorMax.out_shape((1, es), (1, downscale1), st=(1, stride1))[1]
 print "l1 es:", es
