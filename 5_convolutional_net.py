@@ -86,14 +86,13 @@ def model(X, w, w2, w3, w4, p_drop_conv, p_drop_hidden):
 
 # trX, teX, trY, teY, num_of_classes = seq_load(onehot=True, seed=7970223320302509880)
 trX, teX, trY, teY, num_of_classes = seq_load(onehot=True)
-sys.exit()
 
 print(trX.shape)
 # TODO spremeni argumente tukaj
 # trX = trX.reshape(-1, 1, 1, 100)
 # teX = teX.reshape(-1, 1, 1, 100)
-trX = trX.reshape(-1, 1, 1, 400)
-teX = teX.reshape(-1, 1, 1, 400)
+trX = trX.reshape(-1, 1, 1, trX.shape[1])
+teX = teX.reshape(-1, 1, 1, trX.shape[1])
 
 X = T.ftensor4()
 Y = T.fmatrix()
@@ -117,8 +116,8 @@ w3 = init_weights((num_filters_3, num_filters_2, 1, cwin3)) # third convolution,
 # TODO popravi es (najbrz mora bit 400) in nato se ostale formule
 
 # expected
-es = 100
-es *= 4
+# es = 100
+es = trX.shape[1]
 # l1 conv:
 # es = (es - cwin1 + 1)
 es = int(math.ceil((es - cwin1 + 1) / 4))  # ??
@@ -137,7 +136,6 @@ es = (es - cwin3 + 1)
 # es = int(math.ceil((es - cwin3 + 4) / 4))
 # l3 max_pool:
 es = DownsampleFactorMax.out_shape((1, es), (1, downscale3), st=(1, stride3))[1]
-print es
 
 w4 = init_weights((num_filters_3 * es, 500))  # fully conected last layer, connects the outputs of 128 filters to 500 (arbitrary) hidden nodes, which are then connected to the output nodes
 w_o = init_weights((500, num_of_classes))  # stevilo koncnih razredov
