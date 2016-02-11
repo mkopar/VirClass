@@ -50,7 +50,7 @@ def RMSprop(cost, params, lr=0.001, rho=0.9, epsilon=1e-6):
 # max pooling:
 #   scaling the input before applying the maxpool filter and
 #   displacement (stride) when sliding the max pool filters
-conv_stride=4
+conv1_stride=4
 
 stride1=2
 downscale1=3  # mogoce na vrednost 2
@@ -63,7 +63,7 @@ downscale3=1
 
 def model(X, w, w2, w3, w4, p_drop_conv, p_drop_hidden):
     # TODO spremeni max_pool argumente
-    l1a = rectify(conv2d(X, w, border_mode='valid', subsample=(1, conv_stride))) # stride along one (horizontal) dimension only
+    l1a = rectify(conv2d(X, w, border_mode='valid', subsample=(1, conv1_stride))) # stride along one (horizontal) dimension only
     l1 = max_pool_2d(l1a, (1, downscale1), st=(1, stride1)) # (1,1)=(vertical, horizontal) downscale, st=(1, step): move to every stride1 column and perform max_pooling there
     l1 = dropout(l1, p_drop_conv)
 
@@ -109,15 +109,11 @@ w = init_weights((num_filters_1, 1, 1, cwin1)) # first convolution, 32 filters, 
 w2 = init_weights((num_filters_2, num_filters_1, 1, cwin2)) # second convolution, 64 filters, stack size 32 (one stack for each filter from previous layer), 1 row, cwin2 columns
 w3 = init_weights((num_filters_3, num_filters_2, 1, cwin3)) # third convolution, 128 filters, stack size 64 (one stack for each filter from previous layes), 1 row, cwin3 columns
 
-
-# TODO popravi es (najbrz mora bit 400) in nato se ostale formule
-
 # expected
-es = 100
-# es = trX.shape[1]
+# es = 100
+es = trX.shape[1] / conv1_stride
 # l1 conv:
 es = (es - cwin1 + 1)
-# es = int(math.ceil((es - cwin1 + 1) / 4))  # ?? mogoce +4?
 # l1 max_pool:
 es = DownsampleFactorMax.out_shape((1, es), (1, downscale1), st=(1, stride1))[1]
 
