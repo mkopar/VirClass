@@ -1,20 +1,20 @@
-import gzip
-from math import ceil
 import pickle
 import random
-import math
 import numpy as np
-import os
 import sys
 from load_sequences import run
 from load_sequences import get_rec
 import matplotlib.pyplot as plt
 import pylab as P
 
-datasets_dir = 'media/datasets/'
-
 
 def one_hot(x, n):
+    """
+    Get true classes (Y) and number of classes and return Y matrix in binary representation.
+    :param x: true classes (Y)
+    :param n: number of classes
+    :return: Y matrix in binary representation
+    """
     if type(x) == list:
         x = np.array(x)
     x = x.flatten()
@@ -24,6 +24,11 @@ def one_hot(x, n):
 
 
 def seq_to_bits(vec):
+    """
+    Get sequence and transform it into number representation.
+    :param vec: sequence
+    :return: number representation
+    """
     bits_vector = []
     for i, c in enumerate(vec):
         if c == "A":
@@ -53,11 +58,19 @@ def seq_to_bits(vec):
 
 
 def load_seqs(ids):
-    return [get_rec(x).seq._data for x in ids]  # nalozi sekvence
+    """
+    Get list of genome ids and return list of genome sequences.
+    :param ids: list of genome ids
+    :return: list of genome sequences
+    """
+    return [get_rec(x).seq._data for x in ids]
 
 
 def histogram(values, name):
-    """Draw histogram for given values and save it with given name."""
+    """Draw histogram for given values and save it with given name.
+    :param values: values to show in histogram
+    :param name: name for saving figure
+    """
     print max(values)
     bins = np.arange(0, 5000000, 250000)
     P.hist(values, bins, histtype='bar', rwidth=0.8, log=True)
@@ -68,14 +81,50 @@ def histogram(values, name):
     plt.clf()
 
 
-def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.maxint)):
+def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.maxint), thresh=0.1):
+    """
+    In this method we want to simulate sequencing. We create samples in length of seq_len (in our case 100).
+
+    We load data from cached files data-ids.pkl.gz and labels.pkl.gz. When we first run it, those files won't exist
+    so script executes imported method 'run' from file load_sequences.py and generates data (genome ids) and
+    labels (corresponding class ids). We cache those two variables for future executions of script.
+
+    When we have data (genome ids) and labels we load sequences for every genome id.
+
+    We are caching train and test datasets for every seed. If train and test files does not exist, we build it.
+    First we calculate the threshold with selected formula:
+            thresh * examples_per_class * seq_len
+    All classes, which sum of genome lengths is smaller than threshold are skipped.
+
+    When we get labels which are big enough, we start building train and test datasets.
+    We randomly choose virus from a class. After that we choose randomly sample virus sequence.
+    Then we transform every read into numerical values with function seq_to_bits.
+    Nucleotides are being transformed in the following pattern:
+
+            A = [1, 0, 0, 0]
+            T = [0, 1, 0, 0]
+            C = [0, 0, 1, 0]
+            G = [0, 0, 0, 1]
+            _ = [1, 1, 1, 1]
+
+    Datasets are being built until we reach desired dataset size. That means that some classes might be smaller than
+    others for 1 example. Save built datasets.
+
+    Check if onehot flag is true and appropriately change Y.
+
+    Return train and test datasets in numpy arrays.
+
+    :param ntrain: train size
+    :param ntest: test size
+    :param onehot: binary representation of true classes
+    :param seed: random seed
+    :param thresh: threshold
+    :return: train and test datasets as numpy arrays
+    """
 
     seq_len = 100
 
-    # nastavi seed
     random.seed(seed)
-
-    # preveri ce obstaja datoteka s podatki o taxonomy (samo id-ji in labeli), ce ne obstaja pozeni run in shrani
 
     dir = "media"
     try:
@@ -104,7 +153,6 @@ def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.
         number_of_classes = len(set(labels))
         # train_examples_per_class = int(ceil(ntrain / float(number_of_classes)))
         # test_examples_per_class = int(ceil(ntest / float(number_of_classes)))
-        # popravi da se bo v trX vstavljalo zaporedoma za vsak label
         train_examples_per_class = ntrain / number_of_classes
         test_examples_per_class = ntest / number_of_classes
         examples_per_class = train_examples_per_class + test_examples_per_class
@@ -114,12 +162,11 @@ def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.
         teX = []
         teY = []
 
-        temp_count = 0
-
         labels_to_process = []
         examples_in_class = []
         labels_lengths = []
         smaller = []
+
         for label in set(labels):
             first = labels.index(label)
             last = len(labels) - labels[::-1].index(label)
@@ -131,23 +178,31 @@ def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.
             examples_in_class.append((last-first, sum_lengths))
             labels_lengths.append((sum_lengths, last-first))
 
-            threshold = 0.1 * examples_per_class * seq_len
-            if sum_lengths > 0.1 * (examples_per_class * seq_len):
+            threshold = thresh * examples_per_class * seq_len
+            if sum_lengths > thresh * (examples_per_class * seq_len):
                 labels_to_process.append((label, first, last))
             else:
                 smaller.append(label)
 
         print "labels which sum of genome lengths are smaller than %d:" % threshold, smaller
+
+        number_of_classes = len(labels_to_process)
+        train_examples_per_class = ntrain / number_of_classes
+        test_examples_per_class = ntest / number_of_classes
+        examples_per_class = train_examples_per_class + test_examples_per_class
+
         # histogram(labels_lengths, "class_genome_lengths.png")
         # print sorted(examples_in_class)
         # print sorted(labels_lengths)
         # return 0
 
+        temp_count = 0
+
         while temp_count < (ntrain + ntest):
             for label, first, last in labels_to_process:
 
-                vir_idx     = random.choice(range(first, last))  # nakljucno izberi virus iz razreda
-                sample_idx  = random.choice(range(0, (len(data[vir_idx])) - seq_len - 1))  # nakljucno vzorci virus
+                vir_idx     = random.choice(range(first, last))  # randomly choose virus from class
+                sample_idx  = random.choice(range(0, (len(data[vir_idx])) - seq_len - 1))  # randomly sample virus
 
                 if temp_count < ntrain:
                     trX.append(seq_to_bits(data[vir_idx][sample_idx:sample_idx + seq_len]))
@@ -180,118 +235,3 @@ def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.
         teY = np.asarray(teY)
 
     return np.asarray(trX), np.asarray(teX), np.asarray(trY), np.asarray(teY), number_of_classes
-
-    # data = np.load('media/data1-100.npy')
-    # labels = np.load('media/labels1-100.npy')
-    #
-    # tr_idx = []
-    # te_idx = []
-    #
-    #
-    # train_examples_per_class = ntrain / number_of_classes
-    # test_examples_per_class = ntest / number_of_classes
-    # examples_per_class = train_examples_per_class + test_examples_per_class
-    #
-    # labels_list = np.ndarray.tolist(labels)
-    # for label in set(labels):
-    #     if labels_list.count(label) < examples_per_class:
-    #         print "skipping label #%d, size:%d" % (label, labels_list.count(label))
-    #         continue
-    #
-    #     first = labels_list.index(label)
-    #     last = len(labels_list) - labels_list[::-1].index(label)
-    #
-    #     temp_tr = np.random.choice(range(first, last), train_examples_per_class, replace=False).tolist()
-    #     tr_idx += temp_tr
-    #
-    #     test_set = list(set(range(first, last)) - set(temp_tr))
-    #     te_idx += np.random.choice(test_set, test_examples_per_class, replace=False).tolist()
-    #
-    # trX = data[tr_idx].astype(float)
-    # trY = labels[tr_idx]
-    # teX = data[te_idx].astype(float)
-    # teY = labels[te_idx]
-
-    # trX = trX[:ntrain]
-    # trY = trY[:ntrain]
-    #
-    # teX = teX[:ntest]
-    # teY = teY[:ntest]
-
-    # if onehot:
-    #     trY = one_hot(trY, number_of_classes)
-    #     teY = one_hot(teY, number_of_classes)
-    # else:
-    #     trY = np.asarray(trY)
-    #     teY = np.asarray(teY)
-    #
-    # return trX, teX, trY, teY
-
-
-def mnist(ntrain=60000, ntest=10000, onehot=True):
-    data_dir = os.path.join(datasets_dir, 'mnist/')
-    fd = open(os.path.join(data_dir, 'train-images-idx3-ubyte'))
-    loaded = np.fromfile(file=fd, dtype=np.uint8)
-    trX = loaded[16:].reshape((60000, 28 * 28)).astype(float)
-
-    fd = open(os.path.join(data_dir, 'train-labels-idx1-ubyte'))
-    loaded = np.fromfile(file=fd, dtype=np.uint8)
-    trY = loaded[8:].reshape((60000))
-
-    fd = open(os.path.join(data_dir, 't10k-images-idx3-ubyte'))
-    loaded = np.fromfile(file=fd, dtype=np.uint8)
-    teX = loaded[16:].reshape((10000, 28 * 28)).astype(float)
-
-    fd = open(os.path.join(data_dir, 't10k-labels-idx1-ubyte'))
-    loaded = np.fromfile(file=fd, dtype=np.uint8)
-    teY = loaded[8:].reshape((10000))
-
-    trX = trX / 255.
-    teX = teX / 255.
-
-    trX = trX[:ntrain]
-    trY = trY[:ntrain]
-
-    teX = teX[:ntest]
-    teY = teY[:ntest]
-
-    if onehot:
-        trY = one_hot(trY, 10)
-        teY = one_hot(teY, 10)
-    else:
-        trY = np.asarray(trY)
-        teY = np.asarray(teY)
-
-    return trX, teX, trY, teY
-
-
-### not used ###
-
-def get_labels(filename):
-    l = []
-    n_l = []
-    i = 0
-    with gzip.open(filename, 'rb') as f:
-        for line in f:
-            if line not in l:
-                l.append(line)
-                i += 1
-            n_l.append(i)
-    return n_l
-
-
-def read_file(filename):
-    temp = []
-    with gzip.open(filename, 'rb') as f:
-        for line in f:
-            try:
-                temp.append(np.array(map(float, str.split(line, '\t'))))
-            except Exception as e:
-                print e
-                return
-    return np.array(temp)
-
-
-def load_obj(dir, name):
-    with open(dir + '/' + name + '.pkl', 'rb') as f:
-        return pickle.load(f)
