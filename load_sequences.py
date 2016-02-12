@@ -14,7 +14,11 @@ if not os.path.isdir(dir):
 
 
 def get_rec(rec_ID):
-    """Get record for given ID."""
+    """
+    Get record for given genome id.
+    :param rec_ID: genome id
+    :return: record
+    """
     try:
         rec = pickle.load(open(dir + "/%s.pkl.gz" % rec_ID, "rb"))
     except IOError:  # , FileNotFoundError:
@@ -36,6 +40,11 @@ def rec_dd():
 
 
 def get_gene(rec):
+    """
+    Get record and return gene sequence.
+    :param rec: record
+    :return: gene sequence
+    """
     sequence = ""
     for f in rec.features:
         if f.type == "gene":
@@ -44,19 +53,25 @@ def get_gene(rec):
             if f.location.strand == 1:
                 sequence += rec.seq[start:end]
             else:
-                # to nisem zihr
+                # ??
                 sequence += rec.seq[start:end].complement()
 
     return str(sequence)
 
 
 def update_taxonomy(taxonomy, tax_path, seq_record):
-    """Create dictionary with taxonomy name and IDs of sequences which belongs to specific taoxnomy."""
+    """
+    Create dictionary with taxonomy name and IDs of sequences which belongs to specific taxonomy.
+    :param taxonomy: current taxonomy
+    :param tax_path: taxonomy path
+    :param seq_record: record
+    :return: updated taxonomy
+    """
     if len(tax_path) == 0:
         return taxonomy
 
     tax = tax_path[0].lower()
-    if tax in taxonomy:
+    if tax in taxonomy:  # check if tax in taxonomy and update
         taxonomy[tax]["data"].append(seq_record.annotations["gi"])
         # taxonomy[tax]["data"].append(get_gene(rec))
         update_taxonomy(taxonomy[tax], tax_path[1:], seq_record)
@@ -70,6 +85,12 @@ def update_taxonomy(taxonomy, tax_path, seq_record):
 
 
 def check_taxonomy_filter(rec, to_filter):
+    """
+    Check if record is in filter list.
+    :param rec: record
+    :param to_filter: filter list
+    :return: bool
+    """
     in_to_filter = False
     for temp_tax in rec.annotations["taxonomy"]:
         temp_tax = temp_tax.lower().split()
@@ -81,6 +102,12 @@ def check_taxonomy_filter(rec, to_filter):
 
 
 def print_nice(taxonomy, level=0):
+    """
+    Print taxonomy with tabs.
+    :param taxonomy: taxonomy
+    :param level: current level
+    :return:
+    """
     for i in sorted(taxonomy.keys()):
         if i == "data":
             if len(taxonomy) == 1:
@@ -93,6 +120,12 @@ def print_nice(taxonomy, level=0):
 
 
 def remove_lists(taxonomy):
+    """
+    Remove all list nodes from taxonomy.
+    :param taxonomy: taxonomy
+    :return: taxonomy
+    """
+
     # check for recurse exit
     if type(taxonomy) is defaultdict or type(taxonomy) is dict:
         for i in [x for x in taxonomy.keys() if x != "data"]:
@@ -108,6 +141,11 @@ def remove_lists(taxonomy):
 
 
 def count_list_nodes(taxonomy):
+    """
+    Count list nodes and return sum.
+    :param taxonomy: taxonomy
+    :return: int
+    """
     count = 0
     keys = [x for x in taxonomy.keys() if x != "data"]
     for i in keys:
@@ -123,6 +161,11 @@ def count_list_nodes(taxonomy):
 
 
 def count_examples(taxonomy):
+    """
+    Get taxonomy, count examples in every node and return sum.
+    :param taxonomy: taxonomy
+    :return: sum of examples
+    """
     count = 0
     keys = [x for x in taxonomy.keys() if x != "data"]
     for i in keys:
@@ -138,19 +181,17 @@ def count_examples(taxonomy):
 
 
 def get_list_nodes_unique(taxonomy, parent=""):
+    """
+    Get taxonomy and return unique list nodes.
+    :param taxonomy: taxonomy
+    :param parent: parent of current node
+    :return: unique list nodes
+    """
     # preverjeno na roke in dela
     list_nodes = list()
     keys = [x for x in taxonomy.keys() if x != "data"]
     for i in keys:
         if set(taxonomy[i]) == set(list({"data"})):
-            #list_nodes.append((i, parent, taxonomy[i]))
-            # if i == keys[-1]:
-            #     # list_nodes.append((i, parent, taxonomy[i]))
-            #     list_nodes.append((i, parent))
-            #     return list_nodes
-            # else:
-            #     # list_nodes.append((i, parent, taxonomy[i]))
-            #     list_nodes.append((i, parent))
             list_nodes.append(i)
         else:
             list_nodes += get_list_nodes_unique(taxonomy[i], parent + "->" + i)
@@ -159,8 +200,9 @@ def get_list_nodes_unique(taxonomy, parent=""):
 
 def get_all_nodes(taxonomy, parent=""):
     """
-    :param taxonomy:
-    :return: all nodes (including list nodes)
+    Get taxonomy and return all nodes (including list nodes).
+    :param taxonomy: taxonomy
+    :return: all nodes
     """
     all_nodes = list()
     keys = [x for x in taxonomy.keys() if x != "data"]
@@ -176,66 +218,13 @@ def get_all_nodes(taxonomy, parent=""):
     return all_nodes
 
 
-data = []
-label = []
-gids = []
-
-
-def build_data(taxonomy, seq_len=100):
-    for node in [x for x in taxonomy.keys() if x != "data"]:
-        if set(taxonomy[node]) == set(list({"data"})):
-            # sum_100 = 0
-            for gid in taxonomy[node]["data"]:
-                temp_rec = get_rec(gid)
-                temp_seq = temp_rec.seq._data
-                gids.append(gid)
-
-                vector = list(temp_seq)
-                for n, e in enumerate(vector):
-                    if e == "A":
-                        vector[n] = 1
-                    elif e == "T":
-                        vector[n] = 2
-                    elif e == "C":
-                        vector[n] = 3
-                    elif e == "G":
-                        vector[n] = 4
-                    else:
-                        vector[n] = 5
-                        # ce je vrednost nepoznana naj bo enakmoerno oddaljena med 0 in 1
-                        # (ko bomo imel bite bi tukaj dal 0.25 na vse 4 vrednosti)
-                data.append(vector)
-                label.append(node)
-
-                # sum_100 += (len(temp_seq) / seq_len)
-                # j = 0
-                # while (j + 1) * seq_len < len(temp_seq):
-                #     vector = list(temp_seq[(int)(j * seq_len): (int)((j + 1) * seq_len)])
-                #     for n, e in enumerate(vector):
-                #         if e == "A":
-                #             vector[n] = 1
-                #         elif e == "T":
-                #             vector[n] = 2
-                #         elif e == "C":
-                #             vector[n] = 3
-                #         elif e == "G":
-                #             vector[n] = 4
-                #         else:
-                #             vector[n] = 5
-                #             # ce je vrednost nepoznana naj bo enakmoerno oddaljena med 0 in 1
-                #             # (ko bomo imel bite bi tukaj dal 0.25 na vse 4 vrednosti)
-                #     data.append(vector)
-                #     label.append(node)
-                #     # j += 0.5
-                #     j += 1
-            # print "number of 100 long sequences for %s: %d" % (node, sum_100)
-            # class_size.append((sum_100, node))
-
-        else:
-            build_data(taxonomy[node], seq_len)
-
-
 def get_list_nodes_ids_labels(d, parent=""):
+    """
+    Get taxonomy and return tuples of all list nodes.
+    :param d: taxonomy
+    :param parent: parent
+    :return: list of tuples (id, class)
+    """
     if len(d.keys()) > 1 or d.keys() == ["viruses"]:
         temp = []
         for k in [x for x in d.keys() if x != "data"]:
@@ -254,6 +243,10 @@ def get_taxonomy():
     # see distinction between the two, here:
     # http://www.ncbi.nlm.nih.gov/genomes/GenomesHome.cgi?taxid=10239&hopt=faq
 
+    """
+    Build taxonomy from Entrez search.
+    :return: taxonomy
+    """
     term = "Viruses[Organism] AND srcdb_refseq[PROP] AND complete_genome"
     handle = Entrez.esearch(db="nucleotide", term=term, retmax=100000)
     record = Entrez.read(handle)
@@ -280,10 +273,16 @@ def get_taxonomy():
 
 
 def run():
+    """
+    Build taxonomy and get list ids and labels.
+    :return: data, label
+    """
     taxonomy = get_taxonomy()
     remove_lists(taxonomy)
     list_nodes = get_list_nodes_ids_labels(taxonomy)
     data, labels = zip(*list_nodes)
+    for label in labels:
+        print label
     label_number = -1
     temp_l = []
     label_n = []
