@@ -153,10 +153,10 @@ def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.
 
     try:
         print "loading train and test data for seed %d..." % seed
-        trX = pickle.load(open(dir + "/train-data-seed_%d-onehot_%d-threshold_%d.pkl.gz" % (seed, int(onehot), thresh * 100), "rb"))
-        trY = pickle.load(open(dir + "/train-labels-seed_%d-onehot_%d-threshold_%d.pkl.gz" % (seed, int(onehot), thresh * 100), "rb"))
-        teX = pickle.load(open(dir + "/t10k-data-seed_%d-onehot_%d-threshold_%d.pkl.gz" % (seed, int(onehot), thresh * 100), "rb"))
-        teY = pickle.load(open(dir + "/t10k-labels-seed_%d-onehot_%d-threshold_%d.pkl.gz" % (seed, int(onehot), thresh * 100), "rb"))
+        trX = pickle.load(open(dir + "/tr%d-data-seed_%d-onehot_%d-threshold_%d.pkl.gz" % (ntrain, seed, int(onehot), thresh * 100), "rb"))
+        trY = pickle.load(open(dir + "/tr%d-labels-seed_%d-onehot_%d-threshold_%d.pkl.gz" % (ntrain, seed, int(onehot), thresh * 100), "rb"))
+        teX = pickle.load(open(dir + "/te%d-data-seed_%d-onehot_%d-threshold_%d.pkl.gz" % (ntest, seed, int(onehot), thresh * 100), "rb"))
+        teY = pickle.load(open(dir + "/te%d-labels-seed_%d-onehot_%d-threshold_%d.pkl.gz" % (ntest, seed, int(onehot), thresh * 100), "rb"))
     except IOError:  # , FileNotFoundError:
         print "train and test data not found for seed %d..." % seed
         print "generating train and test data..."
@@ -231,10 +231,10 @@ def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.
         assert test_examples_per_class == teY.count(labels_to_process[-1][0])
 
         print "saving train and test data for seed %d..." % seed
-        pickle.dump(trX, open(dir + "/train-data-seed_%d-onehot_%d-threshold_%d.pkl.gz" % (seed, int(onehot), thresh * 100), "wb"), -1)
-        pickle.dump(trY, open(dir + "/train-labels-seed_%d-onehot_%d-threshold_%d.pkl.gz" % (seed, int(onehot), thresh * 100), "wb"), -1)
-        pickle.dump(teX, open(dir + "/t10k-data-seed_%d-onehot_%d-threshold_%d.pkl.gz" % (seed, int(onehot), thresh * 100), "wb"), -1)
-        pickle.dump(teY, open(dir + "/t10k-labels-seed_%d-onehot_%d-threshold_%d.pkl.gz" % (seed, int(onehot), thresh * 100), "wb"), -1)
+        pickle.dump(trX, open(dir + "/tr%d-data-seed_%d-onehot_%d-threshold_%d.pkl.gz" % (ntrain, seed, int(onehot), thresh * 100), "wb"), -1)
+        pickle.dump(trY, open(dir + "/tr%d-labels-seed_%d-onehot_%d-threshold_%d.pkl.gz" % (ntrain, seed, int(onehot), thresh * 100), "wb"), -1)
+        pickle.dump(teX, open(dir + "/te%d-data-seed_%d-onehot_%d-threshold_%d.pkl.gz" % (ntest, seed, int(onehot), thresh * 100), "wb"), -1)
+        pickle.dump(teY, open(dir + "/te%d-labels-seed_%d-onehot_%d-threshold_%d.pkl.gz" % (ntest, seed, int(onehot), thresh * 100), "wb"), -1)
         print "saving done"
 
     number_of_classes = len(set(labels))
