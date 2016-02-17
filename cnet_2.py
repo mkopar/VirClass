@@ -1,6 +1,5 @@
 import math
 import sys
-from sklearn.cross_validation import KFold
 import theano
 from theano import tensor as T
 from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
