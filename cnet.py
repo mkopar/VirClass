@@ -1,5 +1,6 @@
 import math
 import sys
+from sklearn.cross_validation import KFold
 import theano
 from theano import tensor as T
 from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
@@ -147,7 +148,16 @@ updates = RMSprop(cost, params, lr=0.001)
 train = theano.function(inputs=[X, Y], outputs=cost, updates=updates, allow_input_downcast=True)
 predict = theano.function(inputs=[X], outputs=y_x, allow_input_downcast=True)
 
-for i in range(100):
-    for start, end in zip(range(0, len(trX), 128), range(128, len(trX), 128)):
-        cost = train(trX[start:end], trY[start:end])
-    print np.mean(np.argmax(teY, axis=1) == predict(teX))
+kf = KFold(input_len, n_folds=5)
+
+for train_index, test_index in kf:
+    X_train, X_test = trX[train_index], teX[test_index]
+    Y_train, Y_test = trY[train_index], teY[test_index]
+
+    train(X_train, Y_train)
+    print np.mean(np.argmax(Y_test, axis=1) == predict(X_test))
+
+# for i in range(100):
+#     for start, end in zip(range(0, len(trX), 128), range(128, len(trX), 128)):
+#         cost = train(trX[start:end], trY[start:end])
+#     print np.mean(np.argmax(teY, axis=1) == predict(teX))
