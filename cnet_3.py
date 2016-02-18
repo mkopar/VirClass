@@ -101,13 +101,13 @@ X = T.ftensor4()
 Y = T.fmatrix()
 
 # size of convolution windows, for each layer different values can be used
-cwin1=4*6  # veckratnik stevila 4, sicer spodnja formula za "l1 es" ne drzi vedno,  5 ali 6 nukleotidov da dobimo vzorce ki so dovolj redki da so uporabni
-cwin2=5
-cwin3=3
+cwin1=4*8  # veckratnik stevila 4, sicer spodnja formula za "l1 es" ne drzi vedno,  5 ali 6 nukleotidov da dobimo vzorce ki so dovolj redki da so uporabni
+cwin2=3
+cwin3=2
 
-num_filters_1=32 # how many different filters to lear at each layer
-num_filters_2=48
-num_filters_3=64
+num_filters_1=32 / 2 # how many different filters to lear at each layer
+num_filters_2=48 / 2
+num_filters_3=64 / 2
 w = init_weights((num_filters_1, 1, 1, cwin1)) # first convolution, 32 filters, stack size 1, 1 rows, cwin1 columns
 w2 = init_weights((num_filters_2, num_filters_1, 1, cwin2)) # second convolution, 64 filters, stack size 32 (one stack for each filter from previous layer), 1 row, cwin2 columns
 w3 = init_weights((num_filters_3, num_filters_2, 1, cwin3)) # third convolution, 128 filters, stack size 64 (one stack for each filter from previous layes), 1 row, cwin3 columns

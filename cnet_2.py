@@ -1,13 +1,14 @@
-import math
-import sys
+import numpy as np
+import time
+
 import theano
 from theano import tensor as T
 from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
-import numpy as np
 from load import seq_load
 from theano.tensor.nnet.conv import conv2d
 from theano.tensor.signal.downsample import max_pool_2d
 from theano.tensor.signal.downsample import DownsampleFactorMax
+
 
 theano.config.floatX='float32'
 
@@ -84,6 +85,7 @@ def model(X, w, w2, w3, w4, p_drop_conv, p_drop_hidden):
     pyx = softmax(T.dot(l4, w_o))
     return l1, l2, l3, l4, pyx
 
+print "start:", time.strftime('%X %x %Z')
 trX, teX, trY, teY, num_of_classes = seq_load(onehot=True, seed=7970223320302509880)
 # trX, teX, trY, teY, num_of_classes = seq_load(onehot=True)
 
@@ -151,3 +153,5 @@ for i in range(100):
     for start, end in zip(range(0, len(trX), 128), range(128, len(trX), 128)):
         cost = train(trX[start:end], trY[start:end])
     print np.mean(np.argmax(teY, axis=1) == predict(teX))
+
+print "stop:", time.strftime('%X %x %Z')
