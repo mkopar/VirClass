@@ -99,14 +99,12 @@ def model(X, w, w2, w3, w4, p_drop_conv, p_drop_hidden):
 
     # repeat block
     l2a = rectify(conv2d(l1, w2, subsample=(1, 1))) # stride along horizontal
-    # l2 = max_pool_2d(l2a, (2, 2))
     l2 = max_pool_2d(l2a, (1, downscale2), st=(1, stride2))
     l2 = dropout(l2, p_drop_conv)
 
     l3a = rectify(conv2d(l2, w3, subsample=(1, 1))) # stride along horizontal
-    # l3b = max_pool_2d(l3a, (2, 2))
     l3b = max_pool_2d(l3a, (1, downscale3), st=(1, stride3))
-    l3 = T.flatten(l3b, outdim=2)
+    l3 = T.flatten(l3b, outdim=2) # convert from 4tensor to normal matrix
     l3 = dropout(l3, p_drop_conv)
 
     l4 = rectify(T.dot(l3, w4))
