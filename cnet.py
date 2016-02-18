@@ -1,5 +1,3 @@
-import math
-import sys
 import time
 import theano
 from theano import tensor as T
@@ -83,10 +81,16 @@ downscale3=1
 
 def model(X, w, w2, w3, w4, p_drop_conv, p_drop_hidden):
     """
+        Here we perform convolution and everything belonging to it.
+        Code is split into 4 "blocks" - 3 blocks of computation and last block where we have fully connected layer.
 
+        In each block we perform convolution, followed by rectify activation function. After that we perform max pool
+        and add some noise with dropout. This is repeated for layers 2 and 3.
+        Last layer is fully connected layer, which connects all the filters to 500 hidden nodes. These nodes are then
+        connected to the output nodes.
     """
     # block of computation
-    # valid: apply filter wherever it completely overlaps with the input
+    # border_mode='valid': apply filter wherever it completely overlaps with the input
     l1a = rectify(conv2d(X, w, border_mode='valid', subsample=(1, conv1_stride))) # stride along one (horizontal) dimension only
     l1 = max_pool_2d(l1a, (1, downscale1), st=(1, stride1)) # (1,1)=(vertical, horizontal) downscale, st=(1, step): move to every stride1 column and perform max_pooling there
     l1 = dropout(l1, p_drop_conv)
@@ -108,26 +112,23 @@ def model(X, w, w2, w3, w4, p_drop_conv, p_drop_hidden):
     return l1, l2, l3, l4, pyx
 
 print "start:", time.strftime('%X %x %Z')
-trX, teX, trY, teY, num_of_classes = seq_load(onehot=True, seed=7970223320302509880)
-# trX, teX, trY, teY, num_of_classes = seq_load(onehot=True)
+trX, teX, trY, teY, num_of_classes = seq_load(onehot=True, seed=7970223320302509880) # load data
 
 print(trX.shape)
-input_len = trX.shape[1]
-# trX = trX.reshape(-1, 1, 1, 100)
-# teX = teX.reshape(-1, 1, 1, 100)
+input_len = trX.shape[1] # save input length for further use
 trX = trX.reshape(-1, 1, 1, input_len)
 teX = teX.reshape(-1, 1, 1, input_len)
 
-# now matrix types
+# matrix types
 X = T.ftensor4()
 Y = T.fmatrix()
 
 # size of convolution windows, for each layer different values can be used
-cwin1=4*6  # veckratnik stevila 4, sicer spodnja formula za "l1 es" ne drzi vedno,  5 ali 6 nukleotidov da dobimo vzorce ki so dovolj redki da so uporabni
+cwin1=4*6  # multiples of 4 because of data representation
 cwin2=5
 cwin3=3
 
-num_filters_1=32 # how many different filters to lear at each layer
+num_filters_1=32 # how many different filters to learn at each layer
 num_filters_2=48
 num_filters_3=64
 w = init_weights((num_filters_1, 1, 1, cwin1)) # first convolution, 32 filters, stack size 1, 1 rows, cwin1 columns
@@ -142,45 +143,43 @@ print "num_filters_1 %d" % num_filters_1
 print "num_filters_2 %d" % num_filters_2
 print "num_filters_3 %d" % num_filters_3
 
-# expected
-# es = 100
 # l1 conv:
 es = input_len
 es = (es - cwin1 + 1)
 es = es / conv1_stride
 # l1 max_pool:
-es = DownsampleFactorMax.out_shape((1, es), (1, downscale1), st=(1, stride1))[1]
+es = DownsampleFactorMax.out_shape((1, es), (1, downscale1), st=(1, stride1))[1] # downscale for first layer
 print "l1 es:", es
 
 # l2 conv:
 es = (es - cwin2 + 1)
 # l2 max_pool:
-es = DownsampleFactorMax.out_shape((1, es), (1, downscale2), st=(1, stride2))[1]
+es = DownsampleFactorMax.out_shape((1, es), (1, downscale2), st=(1, stride2))[1] # downscale for second layer
 print "l2 es:", es
 
 # l3 conv:
 es = (es - cwin3 + 1)
 # l3 max_pool:
-es = DownsampleFactorMax.out_shape((1, es), (1, downscale3), st=(1, stride3))[1]
+es = DownsampleFactorMax.out_shape((1, es), (1, downscale3), st=(1, stride3))[1] # downscale for third layer
 print "l3 es:", es
 
-w4 = init_weights((num_filters_3 * es, 500))  # fully conected last layer, connects the outputs of 128 filters to 500 (arbitrary) hidden nodes, which are then connected to the output nodes
+# downscaling is performed so that we correctly set number of filters in last layer
+
+w4 = init_weights((num_filters_3 * es, 500))  # fully conected last layer, connects the outputs of n filters to 500 (arbitrary) hidden nodes, which are then connected to the output nodes
 w_o = init_weights((500, num_of_classes))
 
-# noise during training
-noise_l1, noise_l2, noise_l3, noise_l4, noise_py_x = model(X, w, w2, w3, w4, 0.2, 0.5)
-# no noise for prediction
-l1, l2, l3, l4, py_x = model(X, w, w2, w3, w4, 0., 0.)
-y_x = T.argmax(py_x, axis=1)
+noise_l1, noise_l2, noise_l3, noise_l4, noise_py_x = model(X, w, w2, w3, w4, 0.2, 0.5) # noise during training
+l1, l2, l3, l4, py_x = model(X, w, w2, w3, w4, 0., 0.) # no noise for prediction
+y_x = T.argmax(py_x, axis=1) # maxima predictions
 
-
-cost = T.mean(T.nnet.categorical_crossentropy(noise_py_x, Y))
+cost = T.mean(T.nnet.categorical_crossentropy(noise_py_x, Y)) # classification matrix to optimize - maximize the value that is actually there and minimize the others
 params = [w, w2, w3, w4, w_o]
-updates = RMSprop(cost, params, lr=0.001)
+updates = RMSprop(cost, params, lr=0.001) # update function
 
-train = theano.function(inputs=[X, Y], outputs=cost, updates=updates, allow_input_downcast=True)
-predict = theano.function(inputs=[X], outputs=y_x, allow_input_downcast=True)
+train = theano.function(inputs=[X, Y], outputs=cost, updates=updates, allow_input_downcast=True) # compile train function
+predict = theano.function(inputs=[X], outputs=y_x, allow_input_downcast=True) # compile predict function
 
+# testing
 for i in range(100):
     for start, end in zip(range(0, len(trX), 128), range(128, len(trX), 128)):
         cost = train(trX[start:end], trY[start:end])
