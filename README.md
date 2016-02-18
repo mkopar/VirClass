@@ -4,9 +4,9 @@ This is a tool for classifying virus samples into virus classes.
 It uses convolutional neural network for classifying.
 I worked under the mentorship of Mr. Tomaž Curk, PhD, Assistant Professor.
 
-The motivation for this was my Diploma thesis, where my goal was to classify viral sequences into
+The motivation for this was my diploma thesis, where my goal was to classify viral sequences into
 taxonomic groups by using standard machine learning methods and attributive description of the data.
-The results wasn't really successful therefore I wanted to research further.
+The results was not really successful therefore we wanted to research further.
 
 Now we approach the problem using convolutional neural network on short
 sequence reads to classify it in class.
@@ -25,6 +25,7 @@ These two steps are repeated until we reach examples per class.
 For more detailed explanation of how the code works please see documentation in files.
 
 ## Neural network
+We checked a few articles about text classification using neural networks.
 We found the skeleton for our convolutional neural network
 [here](https://github.com/newmu/theano-tutorials). The code is explained in
 [this](https://www.youtube.com/watch?v=S75EdAcXHKk) tutorial. The architecture
@@ -80,10 +81,13 @@ File        | Result  | Execution time
 `cnet_2.py` |  13.31% | ~14h
 `cnet_3.py` |  9.04%  | ~7h
 
-
-results
-zakaj so taki
-kaj bi lahko še izboljšali
+Results vary on the architecture of neural network. Above are precision results and estimate execution time.
+Results are not really good. This might be because of our evaluation type. The evaluation is probably too strict
+because we want to predict exact class for one read, where one read might be present in multiple classes.
+It would be good to check the results for different representation of nucleotides
+(we should encode it into pyrimidines and purines instead of every single nucleotide). It would also be good to
+check the results with different architecture of neural network (where we exclude one layer or with different
+parameters).
 
 ## Software
 
