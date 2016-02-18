@@ -33,48 +33,48 @@ we represent sequences as "pictures" with 1px height.
 
 ![alt-text](https://github.com/mkopar/Virus-classification-theano/blob/master/mylenet.png)
 
-Pictures shows basic idea on how the convolutional neural network works. Our network works similar to this,
+Picture above shows basic idea on how the convolutional neural network works. Our network works similar to this,
 only that we do not have a regular picture.
 
-Every nucleotide is represented with following vectors:
+We implemented following encoding for nucleotides:
 * `A = [1, 0, 0, 0]`
 * `T = [0, 1, 0, 0]`
 * `C = [0, 0, 1, 0]`
 * `G = [0, 0, 0, 1]`
 * `(everything else) = [1, 1, 1, 1]`
 
+For example, sequence `ACG` looks like this:
 `ACG = [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1].`
 
-As all heights in our code is 1, I will skip the whole shape from now on and
-I will talk only about width.
+As all heights in our code is 1, I will skip the whole shape from now on and will talk only about width.
 
 We have reads of length 100 and every nucleotide is represented by 4 integers. That means that
-lengths of our input are 400.
+length of our inputs is 400.
 We perform convolutions in 3 stages and so we have 3 "blocks" of computation in our code.
 Firstly we perform convolution. We then do rectify activation function, perform max pool, add drop out
-noise and repeat for next stage.
+noise. Those steps are repeated for every stage (except the last one).
 In `cnet.py` we have following parameters:
 - first stage (l1):
-    - convolution with 6 nucleotides and 32 filters to learn on raw input, convolution stride is 4
+    - we do convolution with 6 nucleotides and 32 filters to learn on raw input, convolution stride is 4
     - max pool stride is 2
 - second stage (l2):
-    - convolution with 5 nucleotides and 48 filters to learn on output of l1, convolution stride is 1
+    - we do convolution with 5 nucleotides and 48 filters to learn on output of l1, convolution stride is 1
     - max pool stride is 2
 - third stage (l3)
-    - convolution with 3 nucleotides and 64 filters to learn on l2, convolution stride is 1
+    - we do convolution with 3 nucleotides and 64 filters to learn on l2, convolution stride is 1
     - max pool stride is 2
 - last stage (l4)
-    - connects the outputs of n filters to 500 (arbitrary) hidden nodes
+    - we connect the outputs of n filters to 500 (arbitrary) hidden nodes
     - hidden nodes are then connected to the output nodes
 
-We automatically calculate the number of filters for the fourth stage,
+The number of filters for the fourth stage is automatically calculated,
 because it is dependent on downscale parameters for each layer.
 
 For more detailed info on how the `cnet.py` works please see [here](https://www.youtube.com/watch?v=S75EdAcXHKk).
 
 ## Results
-Results vary on network parameters. We tried 3 different architectures for dataset with
-seed `7970223320302509880` (other parameters are default).
+We tried 3 different architectures for data set with seed `7970223320302509880` (other parameters are default).
+Each architecture is in different file.
 
 File        | Result  | Execution time
 ---         | ---     | ---
@@ -82,9 +82,10 @@ File        | Result  | Execution time
 `cnet_2.py` |  13.31% | ~14h
 `cnet_3.py` |  9.04%  | ~7h
 
-Results vary on the architecture of neural network. Above are precision results and estimate execution time.
-Results are not really good. This might be because of our evaluation type. The evaluation is probably too strict
-because we want to predict exact class for one read, where one read might be present in multiple classes.
+Results vary on the architecture of neural network. In the table above are precision results and estimate execution time
+for each file.
+Results are not really good, which might be because of our evaluation type. The evaluation very strict -
+we want to predict exact class for one read, but one read might be present in multiple classes.
 It would be good to check the results for different representation of nucleotides
 (we should encode it into pyrimidines and purines instead of every single nucleotide). It would also be good to
 check the results with different architecture of neural network (where we exclude one layer or with different
@@ -94,13 +95,13 @@ parameters).
 
 Tool consists of 3 python scripts - `load.py`, `load_sequences.py` and `cnet_n.py`
 (where n is integer and represents specific neural network architecture).
-All code is written in Python 2.7.2. We also used numpy, BioPython and Theano libraries.
-The main script is `cnet_n.py` - you simply run it and it
-handles the other two scripts to get the data.
+All code is written in Python 2.7.2. We used libraries such as numpy, BioPython and Theano.
+The main script is `cnet_n.py` - you run it and it handles the other two scripts to get the data.
 
-Scripts which are responsible for data create folder cache and media in working directory.
-When `load_sequences.py` is run folder cache is created (if it does not exists already).
-It stores records from NCBI website to avoid downloading next time we run it.
-When `load.py` is run folder media is created (if does not exists already).
-Media directory stores data ids and list labels from our dataset.
-It also stores train and test data for unique random seeds that have already been built.
+Scripts which are responsible for data create folders cache and media in working directory.
+Folder cache is created by `load_sequences.py` (if it does not exists already).
+This folder stores records from NCBI website to avoid downloading every time we run it.
+Folder media is created by `load.py` (if does not exists already).
+Media directory stores data ids and list labels from our data set, so we do not need to built taxonomy
+tree every time we run it. Media directory also stores train and test data for
+unique random seeds that have already been built.
