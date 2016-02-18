@@ -78,7 +78,7 @@ Each architecture is in different file.
 
 File        | Result  | Execution time
 ---         | ---     | ---
-`cnet.py`   | ~16% (still calculating) | ~26h
+`cnet.py`   | ~16% (still calculating) | ~29h
 `cnet_2.py` |  13.31% | ~14h
 `cnet_3.py` |  9.04%  | ~7h
 
