@@ -101,7 +101,7 @@ X = T.ftensor4()
 Y = T.fmatrix()
 
 # size of convolution windows, for each layer different values can be used
-cwin1=4*8  # veckratnik stevila 4, sicer spodnja formula za "l1 es" ne drzi vedno,  5 ali 6 nukleotidov da dobimo vzorce ki so dovolj redki da so uporabni
+cwin1=4*6  # veckratnik stevila 4, sicer spodnja formula za "l1 es" ne drzi vedno,  5 ali 6 nukleotidov da dobimo vzorce ki so dovolj redki da so uporabni
 cwin2=3
 cwin3=2
 
