@@ -1,3 +1,4 @@
+import os
 import pickle
 import random
 import numpy as np
@@ -137,6 +138,9 @@ def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.
     random.seed(seed)
 
     dir = "media"
+    if not os.path.isdir(dir):
+        os.makedirs(dir)
+
     try:
         print "loading data and labels..."
         data = pickle.load(open(dir + "/data-ids.pkl.gz", "rb"))
