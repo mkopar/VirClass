@@ -15,19 +15,35 @@ theano.config.floatX='float32'
 srng = RandomStreams()
 
 def floatX(X):
+    """
+    Convert X to float32 or float64, depending on how we configure theano.
+    """
     return np.asarray(X, dtype=theano.config.floatX)
 
 def init_weights(shape):
+    """
+    Initialize model parameters.
+    """
     return theano.shared(floatX(np.random.randn(*shape) * 0.01))
 
 def rectify(X):
+    """
+    Rectifier.
+    """
     return T.maximum(X, 0.)
 
 def softmax(X):
+    """
+    Numerically stable softmax.
+    """
     e_x = T.exp(X - X.max(axis=1).dimshuffle(0, 'x'))
     return e_x / e_x.sum(axis=1).dimshuffle(0, 'x')
 
 def dropout(X, p=0.):
+    """
+    Way of injecting noise into our network - help us with overfitting.
+    Randomly drop values and scale rest.
+    """
     if p > 0:
         retain_prob = 1 - p
         X *= srng.binomial(X.shape, p=retain_prob, dtype=theano.config.floatX)
@@ -35,6 +51,9 @@ def dropout(X, p=0.):
     return X
 
 def RMSprop(cost, params, lr=0.001, rho=0.9, epsilon=1e-6):
+    """
+    Learn different networks better and learning them quicker.
+    """
     grads = T.grad(cost=cost, wrt=params)
     updates = []
     for p, g in zip(params, grads):
@@ -54,7 +73,7 @@ def RMSprop(cost, params, lr=0.001, rho=0.9, epsilon=1e-6):
 conv1_stride=4
 
 stride1=2
-downscale1=3  # mogoce na vrednost 2
+downscale1=3
 
 stride2=2
 downscale2=2
@@ -63,20 +82,23 @@ stride3=2
 downscale3=1
 
 def model(X, w, w2, w3, w4, p_drop_conv, p_drop_hidden):
-    # TODO spremeni max_pool argumente
+    """
+
+    """
+    # block of computation
+    # valid: apply filter wherever it completely overlaps with the input
     l1a = rectify(conv2d(X, w, border_mode='valid', subsample=(1, conv1_stride))) # stride along one (horizontal) dimension only
     l1 = max_pool_2d(l1a, (1, downscale1), st=(1, stride1)) # (1,1)=(vertical, horizontal) downscale, st=(1, step): move to every stride1 column and perform max_pooling there
     l1 = dropout(l1, p_drop_conv)
 
+    # repeat process
     l2a = rectify(conv2d(l1, w2, subsample=(1, 1))) # stride along horizontal
-    # l2 = max_pool_2d(l2a, (2, 2))
     l2 = max_pool_2d(l2a, (1, downscale2), st=(1, stride2))
     l2 = dropout(l2, p_drop_conv)
 
     l3a = rectify(conv2d(l2, w3, subsample=(1, 1))) # stride along horizontal
-    # l3b = max_pool_2d(l3a, (2, 2))
     l3b = max_pool_2d(l3a, (1, downscale3), st=(1, stride3))
-    l3 = T.flatten(l3b, outdim=2)
+    l3 = T.flatten(l3b, outdim=2) # convert from 4tensor to normal matrix
     l3 = dropout(l3, p_drop_conv)
 
     l4 = rectify(T.dot(l3, w4))
@@ -91,12 +113,12 @@ trX, teX, trY, teY, num_of_classes = seq_load(onehot=True, seed=7970223320302509
 
 print(trX.shape)
 input_len = trX.shape[1]
-# TODO spremeni argumente tukaj
 # trX = trX.reshape(-1, 1, 1, 100)
 # teX = teX.reshape(-1, 1, 1, 100)
 trX = trX.reshape(-1, 1, 1, input_len)
 teX = teX.reshape(-1, 1, 1, input_len)
 
+# now matrix types
 X = T.ftensor4()
 Y = T.fmatrix()
 
@@ -145,7 +167,9 @@ print "l3 es:", es
 w4 = init_weights((num_filters_3 * es, 500))  # fully conected last layer, connects the outputs of 128 filters to 500 (arbitrary) hidden nodes, which are then connected to the output nodes
 w_o = init_weights((500, num_of_classes))  # stevilo koncnih razredov
 
+# noise during training
 noise_l1, noise_l2, noise_l3, noise_l4, noise_py_x = model(X, w, w2, w3, w4, 0.2, 0.5)
+# no noise for prediction
 l1, l2, l3, l4, py_x = model(X, w, w2, w3, w4, 0., 0.)
 y_x = T.argmax(py_x, axis=1)
 
