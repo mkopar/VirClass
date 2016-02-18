@@ -23,7 +23,7 @@ def get_rec(rec_ID):
         rec = pickle.load(open(dir + "/%s.pkl.gz" % rec_ID, "rb"))
     except IOError:  # , FileNotFoundError:
         print("downloading sequence id:", rec_ID)
-        handle = Entrez.efetch(db="nucleotide", rettype="gb", id=rec_ID, email="a@uni-lj.si")
+        handle = Entrez.efetch(db="nucleotide", rettype="gb", id=rec_ID)
         rec = SeqIO.read(handle, "gb")
         handle.close()
         pickle.dump(rec, open(dir + "/%s.pkl.gz" % rec_ID, "wb"), -1)
