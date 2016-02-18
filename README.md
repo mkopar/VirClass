@@ -14,10 +14,10 @@ sequence reads to classify it in class.
 ## Data
 We assembled the taxonomic structure by collecting data from [NCBI](www.ncbi.nlm.nih.gov) web site.
 To clean the data we applied several filtering steps - we exclude all bacterias, unclassified and
-unspecified parts. After the taxonomy tree is built we shrink number of classes by excluding
-all the list nodes from tree.
+unspecified parts. After the taxonomy tree is built we shrink number of classes by removing
+all the list nodes from tree (as shown in picture below).
 
-![alt-text](https://github.com/mkopar/Virus-classification-theano/blob/master/taksonomija.pdf)
+![alt-text](https://github.com/mkopar/Virus-classification-theano/blob/master/taksonomija.png)
 
 Then we calculate the number of examples per class we want (it depends on given dataset size)
 and randomly sample short (100 nucleotides long) reads from chosen virus sequence.
