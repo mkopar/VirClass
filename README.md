@@ -6,7 +6,7 @@ I worked under the mentorship of Mr. Tomaž Curk, PhD, Assistant Professor.
 
 The motivation for this was my diploma thesis, where my goal was to classify viral sequences into
 taxonomic groups by using standard machine learning methods and attributive description of the data.
-The results was not really successful therefore we wanted to research further.
+The results were not really successful therefore we wanted to research further.
 
 Now we approach the problem using convolutional neural network on short
 sequence reads to classify it in class.
@@ -14,14 +14,13 @@ sequence reads to classify it in class.
 ## Data
 We assembled the taxonomic structure by collecting data from [NCBI](www.ncbi.nlm.nih.gov) web site.
 To clean the data we applied several filtering steps - we exclude all bacterias, unclassified and
-unspecified parts. After the taxonomy tree is built we shrink number of classes by removing
+unspecified parts. After the taxonomy tree is built we shrink classes by removing
 all the list nodes from tree (as shown in picture below).
 
 ![alt-text](https://github.com/mkopar/Virus-classification-theano/blob/master/taksonomija.png)
 
-Then we calculate the number of examples per class we want (it depends on given dataset size)
+Then we calculate the number of examples per class we want (it depends on given data set size)
 and randomly sample short (100 nucleotides long) reads from chosen virus sequence.
-These two steps are repeated until we reach examples per class.
 For more detailed explanation of how the code works please see documentation in files.
 
 ## Neural network
@@ -70,6 +69,8 @@ In `cnet.py` we have following parameters:
 
 We automatically calculate the number of filters for the fourth stage,
 because it is dependent on downscale parameters for each layer.
+
+For more detailed info on how the `cnet.py` works please see [here](https://www.youtube.com/watch?v=S75EdAcXHKk).
 
 ## Results
 Results vary on network parameters. We tried 3 different architectures for dataset with
