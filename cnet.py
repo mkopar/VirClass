@@ -112,6 +112,14 @@ w = init_weights((num_filters_1, 1, 1, cwin1)) # first convolution, 32 filters, 
 w2 = init_weights((num_filters_2, num_filters_1, 1, cwin2)) # second convolution, 64 filters, stack size 32 (one stack for each filter from previous layer), 1 row, cwin2 columns
 w3 = init_weights((num_filters_3, num_filters_2, 1, cwin3)) # third convolution, 128 filters, stack size 64 (one stack for each filter from previous layes), 1 row, cwin3 columns
 
+print "#### CONVOLUTION PARAMETERS ####"
+print "cwin1 %d" % cwin1
+print "cwin2 %d" % cwin2
+print "cwin3 %d" % cwin3
+print "num_filters_1 %d" % num_filters_1
+print "num_filters_2 %d" % num_filters_2
+print "num_filters_3 %d" % num_filters_3
+
 # expected
 # es = 100
 # l1 conv:
