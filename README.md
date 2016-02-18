@@ -17,7 +17,7 @@ To clean the data we applied several filtering steps - we exclude all bacterias,
 unspecified parts. After the taxonomy tree is built we shrink number of classes by excluding
 all the list nodes from tree.
 
-slika taksonomije
+![alt-text](https://github.com/mkopar/Virus-classification-theano/blob/master/taksonomija.pdf)
 
 Then we calculate the number of examples per class we want (it depends on given dataset size)
 and randomly sample short (100 nucleotides long) reads from chosen virus sequence.
@@ -31,7 +31,10 @@ We found the skeleton for our convolutional neural network
 is the same as for convolutional neural networks for pictures, except that in our case
 we represent sequences as "pictures" with 1px height.
 
-slika iz deeplearning
+![alt-text](https://github.com/mkopar/Virus-classification-theano/blob/master/mylenet.png)
+
+Pictures shows basic idea on how the convolutional neural network works. Our network works similar to this,
+only that we do not have a regular picture.
 
 Every nucleotide is represented with following vectors:
 * `A = [1, 0, 0, 0]`
@@ -73,9 +76,9 @@ seed `7970223320302509880` (other parameters are default).
 
 File        | Result  | Execution time
 ---         | ---     | ---
-`cnet.py`   |  | ~24h
-`cnet_2.py` |  | ~14h
-`cnet_3.py` |  | ~7h
+`cnet.py`   | ~16% (still calculating) | ~26h
+`cnet_2.py` |  13.31% | ~14h
+`cnet_3.py` |  9.04%  | ~7h
 
 
 results
@@ -86,7 +89,8 @@ kaj bi lahko še izboljšali
 
 Tool consists of 3 python scripts - `load.py`, `load_sequences.py` and `cnet_n.py`
 (where n is integer and represents specific neural network architecture).
-All code is written in Python 2.7.2. The main script is `cnet_n.py` - you simply run it and it
+All code is written in Python 2.7.2. We also used numpy, BioPython and Theano libraries.
+The main script is `cnet_n.py` - you simply run it and it
 handles the other two scripts to get the data.
 
 Scripts which are responsible for data create folder cache and media in working directory.
