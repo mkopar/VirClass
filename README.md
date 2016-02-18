@@ -22,7 +22,7 @@ slika taksonomije
 Then we calculate the number of examples per class we want (it depends on given dataset size)
 and randomly sample short (100 nucleotides long) reads from chosen virus sequence.
 These two steps are repeated until we reach examples per class.
-For more detailed explanation of how the code works please see the documentation in files.
+For more detailed explanation of how the code works please see documentation in files.
 
 ## Neural network
 We found the skeleton for our convolutional neural network
