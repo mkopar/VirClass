@@ -32,6 +32,7 @@ is the same as for convolutional neural networks for pictures, except that in ou
 we represent sequences as "pictures" with 1px height.
 
 ![alt-text](https://github.com/mkopar/Virus-classification-theano/blob/master/mylenet.png)
+source: deeplearning.net
 
 Picture above shows basic idea on how the convolutional neural network works. Our network works similar to this,
 only that we do not have a regular picture.
@@ -55,14 +56,14 @@ Firstly we perform convolution. We then do rectify activation function, perform 
 noise. Those steps are repeated for every stage (except the last one).
 In `cnet.py` we have following parameters:
 - first stage (l1):
-    - we do convolution with 6 nucleotides and 32 filters to learn on raw input, convolution stride is 4
-    - max pool stride is 2
+    - we do convolution with 6 nucleotides and 32 filters to learn on raw input, convolution stride is 4, output is of width 95
+    - max pool stride is 2, output is of width 47
 - second stage (l2):
-    - we do convolution with 5 nucleotides and 48 filters to learn on output of l1, convolution stride is 1
-    - max pool stride is 2
+    - we do convolution with 5 nucleotides and 48 filters to learn on output of l1, convolution stride is 1, output is of width 43
+    - max pool stride is 2, output is of width 21
 - third stage (l3)
-    - we do convolution with 3 nucleotides and 64 filters to learn on l2, convolution stride is 1
-    - max pool stride is 2
+    - we do convolution with 3 nucleotides and 64 filters to learn on l2, convolution stride is 1, output is of width 19
+    - max pool stride is 2, output is of width 10
 - last stage (l4)
     - we connect the outputs of n filters to 500 (arbitrary) hidden nodes
     - hidden nodes are then connected to the output nodes
