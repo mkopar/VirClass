@@ -32,7 +32,8 @@ is the same as for convolutional neural networks for pictures, except that in ou
 we represent sequences as "pictures" with 1px height.
 
 ![alt-text](https://github.com/mkopar/Virus-classification-theano/blob/master/mylenet.png)
-source: deeplearning.net
+
+Source: deeplearning.net
 
 Picture above shows basic idea on how the convolutional neural network works. Our network works similar to this,
 only that we do not have a regular picture.
