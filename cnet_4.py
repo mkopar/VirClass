@@ -112,7 +112,7 @@ def model(X, w, w2, w3, w4, p_drop_conv, p_drop_hidden):
     return l1, l2, l3, l4, pyx
 
 print "start:", time.strftime('%X %x %Z')
-trX, teX, trY, teY, num_of_classes = seq_load(onehot=True, ntrain=100000, ntest=20000) # load data
+trX, teX, trY, teY, num_of_classes = seq_load(onehot=True, seed=7970223320302509880) # load data
 
 print(trX.shape)
 input_len = trX.shape[1] # save input length for further use
@@ -129,8 +129,8 @@ cwin2=5
 cwin3=3
 
 num_filters_1=32 # how many different filters to learn at each layer
-num_filters_2=8
-num_filters_3=4
+num_filters_2=16
+num_filters_3=12
 w = init_weights((num_filters_1, 1, 1, cwin1)) # first convolution, 32 filters, stack size 1, 1 rows, cwin1 columns
 w2 = init_weights((num_filters_2, num_filters_1, 1, cwin2)) # second convolution, 64 filters, stack size 32 (one stack for each filter from previous layer), 1 row, cwin2 columns
 w3 = init_weights((num_filters_3, num_filters_2, 1, cwin3)) # third convolution, 128 filters, stack size 64 (one stack for each filter from previous layes), 1 row, cwin3 columns
