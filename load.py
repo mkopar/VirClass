@@ -1,6 +1,7 @@
 import os
 import pickle
 import random
+import math
 import numpy as np
 import sys
 from load_sequences import run
@@ -167,8 +168,8 @@ def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.
         number_of_classes = len(set(labels))
         # train_examples_per_class = int(ceil(ntrain / float(number_of_classes)))
         # test_examples_per_class = int(ceil(ntest / float(number_of_classes)))
-        train_examples_per_class = ntrain / number_of_classes
-        test_examples_per_class = ntest / number_of_classes
+        train_examples_per_class = int(math.ceil(ntrain / float(number_of_classes)))
+        test_examples_per_class = int(math.ceil(ntest / float(number_of_classes)))
         examples_per_class = train_examples_per_class + test_examples_per_class
 
         trX = []
@@ -201,8 +202,8 @@ def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.
         print "labels which sum of genome lengths are smaller than %d:" % threshold, smaller
 
         number_of_classes = len(labels_to_process)
-        train_examples_per_class = ntrain / number_of_classes
-        test_examples_per_class = ntest / number_of_classes
+        train_examples_per_class = int(math.ceil(ntrain / float(number_of_classes)))
+        test_examples_per_class = int(math.ceil(ntest / float(number_of_classes)))
         examples_per_class = train_examples_per_class + test_examples_per_class
 
         print "number of classes: %d, examples per class: %d" % (number_of_classes, examples_per_class)
@@ -214,6 +215,8 @@ def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.
 
         temp_count = 0
 
+        prvi = False
+
         while temp_count < (ntrain + ntest):
             for label, first, last in labels_to_process:
 
@@ -224,6 +227,9 @@ def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.
                     trX.append(seq_to_bits(data[vir_idx][sample_idx:sample_idx + seq_len]))
                     trY.append(label)
                 else:
+                    if not prvi:
+                        print label
+                        prvi = True
                     if temp_count - ntrain >= ntest:
                         break
                     teX.append(seq_to_bits(data[vir_idx][sample_idx:sample_idx + seq_len]))
@@ -231,7 +237,28 @@ def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.
 
                 temp_count += 1
 
-        assert train_examples_per_class == trY.count(labels_to_process[-1][0])
+        """
+            Example:
+                ntrain  = 100000
+                ntest   = 20000
+
+                after threshold filter, there are 95 classes left
+
+                train_examples_per_class = 100000 / 95 = 1052.63 = 1053
+                test_examples_per_class  = 20000  / 95 = 210.53 = 211
+
+                After random sampling, there will be only first n classes represented with 1053 examples per class,
+                others will have 1052.
+                So if we ceil numbers, we need to check it with first class, if we don't ceil it, we need to check it
+                with last class in trY.
+
+                As for the test data, there will be a set of data where we have 210 examples per class, others
+                will have 211. Sampling mechanism starts filling test data set when we completely fill train data set.
+                Test examples starts from class n and stops when the test data set is filled out.
+        """
+
+        assert train_examples_per_class == trY.count(labels_to_process[0][0])
+        assert train_examples_per_class - 1 == trY.count(labels_to_process[-1][0])
         assert test_examples_per_class == teY.count(labels_to_process[-1][0])
 
         print "saving train and test data for seed %d..." % seed
