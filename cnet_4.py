@@ -125,8 +125,8 @@ Y = T.fmatrix()
 
 # size of convolution windows, for each layer different values can be used
 cwin1=4*6  # multiples of 4 because of data representation
-cwin2=5
-cwin3=3
+cwin2=4
+cwin3=2
 
 num_filters_1=32 # how many different filters to learn at each layer
 num_filters_2=16
