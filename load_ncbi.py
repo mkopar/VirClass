@@ -1,7 +1,3 @@
-import csv
-import gzip
-import sys
-
 __author__ = 'Matej'
 
 import os
@@ -15,6 +11,18 @@ if not os.path.isdir(dir):
     dir = "cache"
     if not os.path.isdir(dir):
         os.makedirs(dir)
+
+
+
+##############   NCBI RECORD OPERATIONS   ##############
+
+def get_gids(term="Viruses[Organism] AND srcdb_refseq[PROP] AND complete_genome"):
+    #term = "Viruses[Organism] AND srcdb_refseq[PROP] AND complete_genome"
+    handle = Entrez.esearch(db="nucleotide", term=term, retmax=100000)
+    record = Entrez.read(handle)
+    id_list = sorted(set(record["IdList"]))
+    print(record["Count"], len(record["IdList"]), len(id_list))
+    return id_list
 
 
 def get_rec(rec_ID):
@@ -39,10 +47,6 @@ def get_rec(rec_ID):
     return rec
 
 
-def rec_dd():
-    return defaultdict(rec_dd)
-
-
 def get_gene(rec):
     """
     Get record and return gene sequence.
@@ -61,6 +65,24 @@ def get_gene(rec):
                 sequence += rec.seq[start:end].complement()
 
     return str(sequence)
+
+
+def load_oid_seq_classification(ids):
+    seq = {}
+    tax = {}
+    for oid in ids:
+        rec = get_rec(oid)
+        seq[oid] = rec.seq._data
+        tax[oid] = rec.annotations["taxonomy"]
+
+    return seq, tax
+
+
+
+##############   TAXONOMY OPERATIONS   ##############
+
+def rec_dd():
+    return defaultdict(rec_dd)
 
 
 def update_taxonomy(taxonomy, tax_path, seq_record):
@@ -123,128 +145,26 @@ def print_nice(taxonomy, level=0):
             print_nice(taxonomy[i], level + 1)
 
 
-def remove_lists(taxonomy):
+def load_whole_taxonomy():
     """
-    Remove all list nodes from taxonomy.
-    :param taxonomy: taxonomy
-    :return: taxonomy
+    Build taxonomy and get list ids and labels.
+    :return: data, label
     """
+    taxonomy = get_taxonomy(get_gids())
+    list_nodes = get_list_nodes_ids_labels(taxonomy)
+    data, labels = zip(*list_nodes)
+    for label in labels:
+        print label
+    label_number = -1
+    temp_l = []
+    label_n = []
+    for l in labels:
+        if l not in temp_l:
+            temp_l.append(l)
+            label_number += 1
+        label_n.append(label_number)
 
-    # check for recurse exit
-    if type(taxonomy) is defaultdict or type(taxonomy) is dict:
-        for i in [x for x in taxonomy.keys() if x != "data"]:
-            if set(taxonomy[i]) == set(list({"data"})):
-                # if parent has only one list node, remove it
-                #if len([x for x in taxonomy.keys() if x != "data"]) == 1:
-                taxonomy.pop(i)
-                continue
-            else:
-                remove_lists(taxonomy[i])
-    else:
-        return taxonomy
-
-
-def count_list_nodes(taxonomy):
-    """
-    Count list nodes and return sum.
-    :param taxonomy: taxonomy
-    :return: int
-    """
-    count = 0
-    keys = [x for x in taxonomy.keys() if x != "data"]
-    for i in keys:
-        if set(taxonomy[i]) == set(list({"data"})):
-            if i == keys[-1]:
-                count += 1
-                return count
-            else:
-                count += 1
-        else:
-            count += count_list_nodes(taxonomy[i])
-    return count
-
-
-def count_examples(taxonomy):
-    """
-    Get taxonomy, count examples in every node and return sum.
-    :param taxonomy: taxonomy
-    :return: sum of examples
-    """
-    count = 0
-    keys = [x for x in taxonomy.keys() if x != "data"]
-    for i in keys:
-        if set(taxonomy[i]) == set(list({"data"})):
-            if i == keys[-1]:
-                count += len(taxonomy[i]["data"])
-                return count
-            else:
-                count += len(taxonomy[i]["data"])
-        else:
-            count += count_examples(taxonomy[i])
-    return count
-
-
-def get_list_nodes_unique(taxonomy, parent=""):
-    """
-    Get taxonomy and return unique list nodes.
-    :param taxonomy: taxonomy
-    :param parent: parent of current node
-    :return: unique list nodes
-    """
-    # preverjeno na roke in dela
-    list_nodes = list()
-    keys = [x for x in taxonomy.keys() if x != "data"]
-    for i in keys:
-        if set(taxonomy[i]) == set(list({"data"})):
-            list_nodes.append(i)
-        else:
-            list_nodes += get_list_nodes_unique(taxonomy[i], parent + "->" + i)
-    return list_nodes
-
-
-def get_all_nodes(taxonomy, parent=""):
-    """
-    Get taxonomy and return all nodes (including list nodes).
-    :param taxonomy: taxonomy
-    :return: all nodes
-    """
-    all_nodes = list()
-    keys = [x for x in taxonomy.keys() if x != "data"]
-    for i in keys:
-        # if we want all non-list nodes, than this stays, otherwise comment this
-        # if len([x for x in taxonomy[i].keys() if x != "data"]) == 0:
-        # continue
-        if i == "rest":
-            all_nodes.append(parent + "->" + i)
-        else:
-            all_nodes.append(i)
-        all_nodes += get_all_nodes(taxonomy[i], i)
-    return all_nodes
-
-
-def get_list_nodes_ids_labels(d, parent=""):
-    """
-    Get taxonomy and return tuples of all list nodes.
-    :param d: taxonomy
-    :param parent: parent
-    :return: list of tuples (id, class)
-    """
-    if len(d.keys()) > 1 or d.keys() == ["viruses"]:
-        temp = []
-        for k in [x for x in d.keys() if x != "data"]:
-            temp += get_list_nodes_ids_labels(d[k], k)
-        return temp
-    else:
-        return [(x, parent) for x in d["data"]]
-
-
-def get_gids(term="Viruses[Organism] AND srcdb_refseq[PROP] AND complete_genome"):
-    #term = "Viruses[Organism] AND srcdb_refseq[PROP] AND complete_genome"
-    handle = Entrez.esearch(db="nucleotide", term=term, retmax=100000)
-    record = Entrez.read(handle)
-    id_list = sorted(set(record["IdList"]))
-    print(record["Count"], len(record["IdList"]), len(id_list))
-    return id_list
+    return data, label_n
 
 
 def get_taxonomy(id_list):
@@ -270,7 +190,7 @@ def get_taxonomy(id_list):
             if not in_filter:
                 update_taxonomy(taxonomy, rec.annotations["taxonomy"], rec)
 
-            if count == 200:
+            if count == 20:
                 break
             count += 1
         except Exception as e:
@@ -280,34 +200,157 @@ def get_taxonomy(id_list):
     return taxonomy
 
 
-def load_oid_seq_classification(ids):
-    seq = {}
-    tax = {}
-    for x in ids:
-        rec = get_rec(x)
-        seq[x] = rec.seq._data
-        tax[x] = rec.annotations["taxonomy"]
 
-    return seq, tax
+##############   LIST OPERATIONS   ##############
 
+def remove_lists(taxonomy):
+    """
+    Remove all list nodes from taxonomy.
+    :param taxonomy: taxonomy
+    :return: taxonomy
+    """
+
+    # check for recurse exit
+    if type(taxonomy) is defaultdict or type(taxonomy) is dict:
+        for i in [x for x in taxonomy.keys() if x != "data"]:
+            if set(taxonomy[i]) == set(list({"data"})):
+                # if parent has only one list node, remove it
+                #if len([x for x in taxonomy.keys() if x != "data"]) == 1:
+                taxonomy.pop(i)
+                continue
+            else:
+                remove_lists(taxonomy[i])
+    else:
+        return taxonomy
+
+
+def get_list_nodes_unique(taxonomy, parent=""):
+    """
+    Get taxonomy and return unique list nodes.
+    :param taxonomy: taxonomy
+    :param parent: parent of current node
+    :return: unique list nodes
+    """
+    # preverjeno na roke in dela
+    list_nodes = list()
+    keys = [x for x in taxonomy.keys() if x != "data"]
+    for i in keys:
+        if set(taxonomy[i]) == set(list({"data"})):
+            list_nodes.append(i)
+        else:
+            list_nodes += get_list_nodes_unique(taxonomy[i], parent + "->" + i)
+    return list_nodes
+
+
+def count_list_nodes(taxonomy):
+    """
+    Count list nodes and return sum.
+    :param taxonomy: taxonomy
+    :return: int
+    """
+    count = 0
+    keys = [x for x in taxonomy.keys() if x != "data"]
+    for i in keys:
+        if set(taxonomy[i]) == set(list({"data"})):
+            if i == keys[-1]:
+                count += 1
+                return count
+            else:
+                count += 1
+        else:
+            count += count_list_nodes(taxonomy[i])
+    return count
+
+
+def get_list_nodes_ids_labels(d, parent=""):
+    """
+    Get taxonomy and return tuples of all list nodes.
+    :param d: taxonomy
+    :param parent: parent
+    :return: list of tuples (id, class)
+    """
+    if len(d.keys()) > 1 or d.keys() == ["viruses"]:
+        temp = []
+        for k in [x for x in d.keys() if x != "data"]:
+            temp += get_list_nodes_ids_labels(d[k], k)
+        return temp
+    else:
+        return [(x, parent) for x in d["data"]]
+
+
+
+##############   ALL NODES OPERATIONS   ##############
+
+def count_examples(taxonomy):
+    """
+    Get taxonomy, count examples in every node and return sum.
+    :param taxonomy: taxonomy
+    :return: sum of examples
+    """
+    count = 0
+    keys = [x for x in taxonomy.keys() if x != "data"]
+    for i in keys:
+        if set(taxonomy[i]) == set(list({"data"})):
+            if i == keys[-1]:
+                count += len(taxonomy[i]["data"])
+                return count
+            else:
+                count += len(taxonomy[i]["data"])
+        else:
+            count += count_examples(taxonomy[i])
+    return count
+
+
+def get_all_nodes(taxonomy, parent=""):
+    """
+    Get taxonomy and return all nodes (including list nodes).
+    :param taxonomy: taxonomy
+    :return: all nodes
+    """
+    all_nodes = list()
+    keys = [x for x in taxonomy.keys() if x != "data"]
+    for i in keys:
+        # if we want all non-list nodes, than this stays, otherwise comment this
+        # if len([x for x in taxonomy[i].keys() if x != "data"]) == 0:
+        # continue
+        if i == "rest":
+            all_nodes.append(parent + "->" + i)
+        else:
+            all_nodes.append(i)
+        all_nodes += get_all_nodes(taxonomy[i], i)
+    return all_nodes
+
+
+
+##############   OTHER   ##############
 
 def load_seqs_from_ncbi(seq_len=100, skip_read=0, overlap=50):
-    # seq_len = dolzina sekvence, skip_read = koliko readov preskocimo (0 beremo vsakega, 1 preskocimo enega torej
-    # beremo vsakega drugega itd), overlap = stopnja prekrivanja (50 nukleotidov)
-    # iz tukaj hocemo dobit OID, reade in klasifikacijo
+    """
+    Prepare sequences, sliced to seq_len length. Skip every skip_read and overlap two reads with overlap nucleotides.
+    Overlap 50 means that half of the read is going to be overlapped with next read.
+    If seq_len is -1, load whole sequences (do not strip them).
+    :param seq_len: read length
+    :param skip_read: number of skipped reads
+    :param overlap: overlapping nucleotides count
+    :return:    dictionary reads - each genome ID key contains list of reads for specific genome,
+                dictionary taxonomy - each genome ID key contains taxonomy for specific genome
+    """
     data, labels = run()
     print "getting sequences..."
     seqs, tax = load_oid_seq_classification(data)
 
     reads = defaultdict(list)
 
-    for oid, seq in seqs.iteritems():
-        while seq:
-            if len(seq) < seq_len:
-                # krajsih od 100 nocemo
-                break
-            reads[oid].append(seq[:seq_len])
-            seq = seq[seq_len - overlap + ((seq_len - overlap) * skip_read):]
+    if seq_len != -1:
+        for oid, seq in seqs.iteritems():
+            while seq:
+                if len(seq) < seq_len:
+                    # krajsih od 100 nocemo
+                    break
+                reads[oid].append(seq[:seq_len])
+                seq = seq[seq_len - overlap + ((seq_len - overlap) * skip_read):]
+    else:
+        reads = seqs
 
     return reads, tax
 
@@ -335,29 +378,7 @@ def run():
     return data, label_n
 
 
-def load_whole_taxonomy():
-    """
-    Build taxonomy and get list ids and labels.
-    :return: data, label
-    """
-    taxonomy = get_taxonomy(get_gids())
-    list_nodes = get_list_nodes_ids_labels(taxonomy)
-    data, labels = zip(*list_nodes)
-    for label in labels:
-        print label
-    label_number = -1
-    temp_l = []
-    label_n = []
-    for l in labels:
-        if l not in temp_l:
-            temp_l.append(l)
-            label_number += 1
-        label_n.append(label_number)
-
-    return data, label_n
-
-
-def main_run():
+if __name__ == "__main__":
     taxonomy = get_taxonomy()
     print "no of examples after taxonomy was built: %d" % count_examples(taxonomy)
     print "no of list nodes after taxonomy was built: %d" % count_list_nodes(taxonomy)
@@ -365,57 +386,3 @@ def main_run():
     remove_lists(taxonomy)
     print_nice(taxonomy)
     run()
-
-    # save data to file
-    # dir = "media"
-    # if not os.path.isdir(dir):
-    #     os.makedirs(dir)
-    # save_obj(dir, data, "data_raw")
-    #
-    # label_n = []
-    # temp_l = []
-    # label_number = 0
-    # for l in label:
-    #     if l not in temp_l:
-    #         temp_l.append(l)
-    #         label_number += 1
-    #     label_n.append(label_number)
-    # save_obj(dir, label_n, "labels_raw")
-
-    # dir = "media"
-    # if not os.path.isdir(dir):
-    #     os.makedirs(dir)
-    #
-    # with open('data_raw.txt', 'w') as outfile:
-    #     ujson.dump(data, outfile)
-    #
-    # label_n = []
-    # temp_l = []
-    # label_number = 0
-    # for l in label:
-    #     if l not in temp_l:
-    #         temp_l.append(l)
-    #         label_number += 1
-    #     label_n.append(label_number)
-    #
-    # with open('labels_raw.txt', 'w') as outfile:
-    #     ujson.dump(label_n, outfile)
-
-    # with gzip.open('media/data3-100.gz', 'wb') as file:
-    #     file.writelines('\t'.join(str(j) for j in i) + '\n' for i in train_data)
-
-    # with gzip.open('media/labels3-100.gz', 'wb') as file:
-    #     file.writelines(i + '\n' for i in label)
-
-
-    # import subprocess
-    #
-    # p = subprocess.Popen("gzip -c > media/data3_1-100.gz", shell=True, stdin=subprocess.PIPE)
-    # for i in train_data:
-    #     p.stdin.writelines('\t'.join(str(j) for j in i) + '\n')
-    # p.communicate()  # Finish writing data and wait for subprocess to finish
-
-    # p = subprocess.Popen("gzip -c > media/labels3_1-100.gz", shell=True, stdin=subprocess.PIPE)
-    # for i in label:
-    #     p.stdin.writelines(i + '\n')
-    # p.communicate()  # Finish writing data and wait for subprocess to finish

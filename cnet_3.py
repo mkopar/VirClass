@@ -116,7 +116,7 @@ def model(X, w, w2, w3, w4, p_drop_conv, p_drop_hidden):
 print "start:", time.strftime('%X %x %Z')
 #trX, teX, trY, teY, num_of_classes = seq_load(onehot=True, seed=7970223320302509880) # load data
 transmission_dict = {'A': [1, 0, 0, 0], 'T': [0, 1, 0, 0], 'C': [0, 0, 1, 0], 'G': [0, 0, 0, 1]}
-trX, teX, trY, teY, num_of_classes = load_data(filename="test.csv.gz", test=0.2, transmission_dict=transmission_dict, seed=0)
+trX, teX, trY, teY, num_of_classes = load_data(filename="test.fasta.gz", test=0.2, transmission_dict=transmission_dict, seed=0)
 #X, Y, num_of_classes = ...
 #cross validation oz kakrsnokoli razporejanje (npr 80-20)
 #trX, teX, trY, teY = ...

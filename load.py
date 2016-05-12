@@ -6,11 +6,14 @@ import os
 import pickle
 import random
 import math
+from Bio import SeqIO
+from Bio.Seq import Seq
+from Bio.SeqIO import FastaIO
+from Bio.SeqRecord import SeqRecord
 import numpy as np
 import sys
 from sklearn import cross_validation
-from load_ncbi import run, load_seqs_from_ncbi
-from load_ncbi import get_rec
+from load_ncbi import run, load_seqs_from_ncbi, get_rec
 import matplotlib.pyplot as plt
 import pylab as P
 
@@ -67,15 +70,6 @@ def seq_to_bits(vec, unique_nucleotides=None, transmission_dict=None):
     return bits_vector
 
 
-def load_seqs(ids):
-    """
-    Get list of genome ids and return list of genome sequences.
-    :param ids: list of genome ids
-    :return: list of genome sequences
-    """
-    return [get_rec(x).seq._data for x in ids]
-
-
 def histogram(values, name):
     """Draw histogram for given values and save it with given name.
     :param values: values to show in histogram
@@ -91,51 +85,59 @@ def histogram(values, name):
     plt.clf()
 
 
-def load_from_file(filename):
+def load_from_file_fasta(filename, depth=4):
+    """
+    Load data from filename. Default value for depth is 4 - this is depth in classification.
+
+        For example, if we have:
+            Viruses;ssRNA viruses;ssRNA negative-strand viruses;Mononegavirales;Rhabdoviridae;Ephemerovirus
+
+        we want to strip it to
+            Viruses;ssRNA viruses;ssRNA negative-strand viruses;Mononegavirales;
+
+        which is exactly of depth 4.
+
+    Files are saved in FASTA format.
+    Each read will start with genome ID, continued with classification in header and whole genome sequence.
+
+    Example:
+
+        >10086561 Viruses;ssRNA viruses;ssRNA negative-strand viruses;Mononegavirales
+        ACGAGAAAAAACAAAAAAACTAATTGATATTGATACCCAATTAGTGTTTCAACAGGTCTC...
+        >1007626122 Viruses;ssRNA viruses;ssRNA positive-strand viruses, no DNA stage;Caliciviridae
+        GTGAATGAAGATGGCGTCTAACGACGCTAGTGTTGCCAACAGCAACAGCAAAACCATTGC...
+
+
+    :param filename: filename of fasta file
+    :param depth: default value 4, how deep into classification we want to train
+    :return: data and tax - data represents sequences, taxonomy represents classification (for each genome ID)
     """
 
-    :param filename:
-    :return:
-    """
-    # odpri datoteko (ki je fajn da je gzip in tab delimited)
-    # v vsaki vrstici imamo : OID\tSEKVENCA (dolzine 100)\tKLASIFIKACIJA (oz taksonomija)
-    # !!!!! taksonomija menda ni nujna - ne spomnim se pa, kaj moram nardit, ce ni podane
     data = defaultdict(list)
     tax = {}
-    unique_nucleotides = ''
 
     try:
-        with gzip.open(filename, 'rb') as file:
-            reader = csv.reader(file, delimiter='\t', quotechar='\'')
+        with gzip.open(filename, "rU") as file:
+            reader = FastaIO.FastaWriter(file, wrap=None)
             for oid, seq, classification in reader:
-                oid = int(oid)
-                unique_nucleotides += ''.join(set(seq))
-                unique_nucleotides = ''.join(set(unique_nucleotides))
                 #data.append((oid, seq))
                 data[oid].append(seq)
                 tax[oid] = classification
     except IOError:
-        data, tax = load_seqs_from_ncbi(seq_len=100, skip_read=0, overlap=50)
-        # sava data
-        with gzip.open(filename, 'wb') as file:
-            csv_file = csv.writer(file, delimiter='\t', quotechar='\'')
+        data, tax = load_seqs_from_ncbi(seq_len=-1, skip_read=0, overlap=0)
+        # save data
+        with gzip.open(filename, "w") as file:
             for oid, seq in data.iteritems():
-                oid = int(oid)
-                # drugace najdi unique nucleotides
-                # sestavi vse sekvence in potem set
-                unique_nucleotides += set([])
-                unique_nucleotides += ''.join(set(seq))
-                unique_nucleotides = ''.join(set(unique_nucleotides))
-                taxonomy_part = tax[oid]
+                taxonomy_part = ';'.join(tax[oid][:depth])
                 # prepare row
-                row = [oid, seq, taxonomy_part]
-                csv_file.writerow(row)
+                row = SeqRecord(Seq(seq), id=str(oid), description=taxonomy_part)
+                SeqIO.write(row, file, "fasta")
 
-    return data, tax, unique_nucleotides
+    return data, tax
 
 
-def load_data(filename, test=0.2, transmission_dict=None, seed=random.randint(0, sys.maxint)):
-    data, tax, unique_nucleotides = load_from_file(filename)
+def load_data(filename, test=0.2, transmission_dict=None, seed=random.randint(0, sys.maxint), depth=4):
+    data, tax = load_from_file_fasta(filename, depth=depth)
     trX = []
     trY = []
     teX = []
@@ -162,6 +164,17 @@ def load_data(filename, test=0.2, transmission_dict=None, seed=random.randint(0,
 
     # naloadej trX ... in vrni te fajle
     # mogoce lahko nardim podobno k pri seq_load (da se shrani trX, teX ... podatke)
+
+
+#### DEPRECATED - used for csv####
+
+def load_seqs(ids):
+    """
+    Get list of genome ids and return list of genome sequences.
+    :param ids: list of genome ids
+    :return: list of genome sequences
+    """
+    return [get_rec(x).seq._data for x in ids]
 
 
 def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.maxint), thresh=0.1):
@@ -364,3 +377,52 @@ def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.
         teY = np.asarray(teY)
 
     return np.asarray(trX), np.asarray(teX), np.asarray(trY), np.asarray(teY), number_of_classes
+
+
+def load_from_file(filename):
+    """
+    DEPRECATED
+    Open tab delimited file with gzip. If file does not exists, create a new one.
+    This is a csv format of data we want for input.
+    Each row consists as follow:
+
+        GID\tSEQUENCE(length 100)\tCLASSIFICATION
+
+    GID is genome ID, SEQUENCE is our read (of length 100) and CLASSIFICATION is taxonomy for specific genome.
+
+    :param filename:
+    :return:
+    """
+
+    data = defaultdict(list)
+    tax = {}
+    unique_nucleotides = ''
+
+    try:
+        with gzip.open(filename, 'rb') as file:
+            reader = csv.reader(file, delimiter='\t', quotechar='\'')
+            for oid, seq, classification in reader:
+                oid = int(oid)
+                unique_nucleotides += ''.join(set(seq))
+                unique_nucleotides = ''.join(set(unique_nucleotides))
+                #data.append((oid, seq))
+                data[oid].append(seq)
+                tax[oid] = classification
+    except IOError:
+        data, tax = load_seqs_from_ncbi(seq_len=100, skip_read=0, overlap=50)
+        # save data
+        with gzip.open(filename, 'wb') as file:
+            csv_file = csv.writer(file, delimiter='\t', quotechar='\'')
+            for oid, seq in data.iteritems():
+                oid = int(oid)
+                unique_nucleotides += list({''.join([x for x in seq])})
+                taxonomy_part = tax[oid]
+                # prepare row
+                row = [oid, seq, taxonomy_part]
+                csv_file.writerow(row)
+
+    return data, tax, unique_nucleotides
+
+
+if __name__ == "__main__":
+    load_from_file_fasta("test.fasta.gz", depth=4)
