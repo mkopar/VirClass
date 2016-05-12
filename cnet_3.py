@@ -5,7 +5,7 @@ import theano
 from theano import tensor as T
 from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
 import numpy as np
-from load import seq_load
+from load import seq_load, load_data
 from theano.tensor.nnet.conv import conv2d
 from theano.tensor.signal.downsample import max_pool_2d
 from theano.tensor.signal.downsample import DownsampleFactorMax
@@ -114,7 +114,12 @@ def model(X, w, w2, w3, w4, p_drop_conv, p_drop_hidden):
     return l1, l2, l3, l4, pyx
 
 print "start:", time.strftime('%X %x %Z')
-trX, teX, trY, teY, num_of_classes = seq_load(onehot=True, seed=7970223320302509880) # load data
+#trX, teX, trY, teY, num_of_classes = seq_load(onehot=True, seed=7970223320302509880) # load data
+transmission_dict = {'A': [1, 0, 0, 0], 'T': [0, 1, 0, 0], 'C': [0, 0, 1, 0], 'G': [0, 0, 0, 1]}
+trX, teX, trY, teY, num_of_classes = load_data(filename="test.csv.gz", test=0.2, transmission_dict=transmission_dict, seed=0)
+#X, Y, num_of_classes = ...
+#cross validation oz kakrsnokoli razporejanje (npr 80-20)
+#trX, teX, trY, teY = ...
 
 print(trX.shape)
 input_len = trX.shape[1] # save input length for further use

@@ -1,3 +1,7 @@
+import csv
+import gzip
+import sys
+
 __author__ = 'Matej'
 
 import os
@@ -84,7 +88,7 @@ def update_taxonomy(taxonomy, tax_path, seq_record):
     return taxonomy
 
 
-def check_taxonomy_filter(rec, to_filter):
+def filter_classification(rec, to_filter):
     """
     Check if record is in filter list.
     :param rec: record
@@ -234,7 +238,16 @@ def get_list_nodes_ids_labels(d, parent=""):
         return [(x, parent) for x in d["data"]]
 
 
-def get_taxonomy():
+def get_gids(term="Viruses[Organism] AND srcdb_refseq[PROP] AND complete_genome"):
+    #term = "Viruses[Organism] AND srcdb_refseq[PROP] AND complete_genome"
+    handle = Entrez.esearch(db="nucleotide", term=term, retmax=100000)
+    record = Entrez.read(handle)
+    id_list = sorted(set(record["IdList"]))
+    print(record["Count"], len(record["IdList"]), len(id_list))
+    return id_list
+
+
+def get_taxonomy(id_list):
     # call: python get_viral_sequence.py>log.out 2>log.err
 
     # all virus sequences
@@ -247,24 +260,19 @@ def get_taxonomy():
     Build taxonomy from Entrez search.
     :return: taxonomy
     """
-    term = "Viruses[Organism] AND srcdb_refseq[PROP] AND complete_genome"
-    handle = Entrez.esearch(db="nucleotide", term=term, retmax=100000)
-    record = Entrez.read(handle)
-    id_list = sorted(set(record["IdList"]))
-    print(record["Count"], len(record["IdList"]), len(id_list))
 
     taxonomy = rec_dd()
     count = 0
     for genome_id in id_list:
         try:
             rec = get_rec(genome_id)
-            in_filter = check_taxonomy_filter(rec, list({"bacteria", "unclassified", "unassigned"}))
+            in_filter = filter_classification(rec, list({"bacteria", "unclassified", "unassigned"}))
             if not in_filter:
                 update_taxonomy(taxonomy, rec.annotations["taxonomy"], rec)
 
-            # if count == 200:
-            #     break
-            # count += 1
+            if count == 200:
+                break
+            count += 1
         except Exception as e:
             print("problems...")
             print e
@@ -272,13 +280,67 @@ def get_taxonomy():
     return taxonomy
 
 
+def load_oid_seq_classification(ids):
+    seq = {}
+    tax = {}
+    for x in ids:
+        rec = get_rec(x)
+        seq[x] = rec.seq._data
+        tax[x] = rec.annotations["taxonomy"]
+
+    return seq, tax
+
+
+def load_seqs_from_ncbi(seq_len=100, skip_read=0, overlap=50):
+    # seq_len = dolzina sekvence, skip_read = koliko readov preskocimo (0 beremo vsakega, 1 preskocimo enega torej
+    # beremo vsakega drugega itd), overlap = stopnja prekrivanja (50 nukleotidov)
+    # iz tukaj hocemo dobit OID, reade in klasifikacijo
+    data, labels = run()
+    print "getting sequences..."
+    seqs, tax = load_oid_seq_classification(data)
+
+    reads = defaultdict(list)
+
+    for oid, seq in seqs.iteritems():
+        while seq:
+            if len(seq) < seq_len:
+                # krajsih od 100 nocemo
+                break
+            reads[oid].append(seq[:seq_len])
+            seq = seq[seq_len - overlap + ((seq_len - overlap) * skip_read):]
+
+    return reads, tax
+
+
 def run():
     """
     Build taxonomy and get list ids and labels.
     :return: data, label
     """
-    taxonomy = get_taxonomy()
-    remove_lists(taxonomy)
+    taxonomy = get_taxonomy(get_gids())
+    # remove_lists(taxonomy)
+    list_nodes = get_list_nodes_ids_labels(taxonomy)
+    data, labels = zip(*list_nodes)
+    for label in labels:
+        print label
+    label_number = -1
+    temp_l = []
+    label_n = []
+    for l in labels:
+        if l not in temp_l:
+            temp_l.append(l)
+            label_number += 1
+        label_n.append(label_number)
+
+    return data, label_n
+
+
+def load_whole_taxonomy():
+    """
+    Build taxonomy and get list ids and labels.
+    :return: data, label
+    """
+    taxonomy = get_taxonomy(get_gids())
     list_nodes = get_list_nodes_ids_labels(taxonomy)
     data, labels = zip(*list_nodes)
     for label in labels:
@@ -357,6 +419,3 @@ def main_run():
     # for i in label:
     #     p.stdin.writelines(i + '\n')
     # p.communicate()  # Finish writing data and wait for subprocess to finish
-
-
-# main_run()
