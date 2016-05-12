@@ -73,7 +73,7 @@ def load_oid_seq_classification(ids):
     for oid in ids:
         rec = get_rec(oid)
         seq[oid] = rec.seq._data
-        tax[oid] = rec.annotations["taxonomy"]
+        tax[oid] = ';'.join(rec.annotations["taxonomy"])
 
     return seq, tax
 
@@ -364,8 +364,8 @@ def run():
     # remove_lists(taxonomy)
     list_nodes = get_list_nodes_ids_labels(taxonomy)
     data, labels = zip(*list_nodes)
-    for label in labels:
-        print label
+    # for label in labels:
+    #     print label
     label_number = -1
     temp_l = []
     label_n = []

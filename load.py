@@ -1,7 +1,6 @@
 from collections import defaultdict
 import csv
 import gzip
-from itertools import combinations
 import os
 import pickle
 import random
@@ -117,20 +116,24 @@ def load_from_file_fasta(filename, depth=4):
     tax = {}
 
     try:
-        with gzip.open(filename, "rU") as file:
-            reader = FastaIO.FastaWriter(file, wrap=None)
-            for oid, seq, classification in reader:
-                #data.append((oid, seq))
-                data[oid].append(seq)
+        with gzip.open(filename, "r") as file:
+            # read data
+            print "reading..."
+            for seq_record in SeqIO.parse(file, "fasta"):
+                oid = seq_record.id
+                classification = seq_record.description.split(oid)[1].strip()
+                seq = str(seq_record.seq)
+                data[oid] = seq
                 tax[oid] = classification
     except IOError:
         data, tax = load_seqs_from_ncbi(seq_len=-1, skip_read=0, overlap=0)
         # save data
         with gzip.open(filename, "w") as file:
+            print "writing..."
             for oid, seq in data.iteritems():
-                taxonomy_part = ';'.join(tax[oid][:depth])
+                tax[oid] = ';'.join(tax[oid].split(";")[:depth])
                 # prepare row
-                row = SeqRecord(Seq(seq), id=str(oid), description=taxonomy_part)
+                row = SeqRecord(Seq(seq), id=str(oid), description=tax[oid])
                 SeqIO.write(row, file, "fasta")
 
     return data, tax
@@ -166,7 +169,7 @@ def load_data(filename, test=0.2, transmission_dict=None, seed=random.randint(0,
     # mogoce lahko nardim podobno k pri seq_load (da se shrani trX, teX ... podatke)
 
 
-#### DEPRECATED - used for csv####
+#### DEPRECATED - used for csv ####
 
 def load_seqs(ids):
     """
@@ -425,4 +428,10 @@ def load_from_file(filename):
 
 
 if __name__ == "__main__":
-    load_from_file_fasta("test.fasta.gz", depth=4)
+    data, tax = load_from_file_fasta("test.fasta.gz", depth=4)
+
+    format_str = "{:11}\t{:80}\t{:7}"
+
+    print format_str.format("genome_id", "classification", "sequence_length")
+    for key, val in tax.iteritems():
+        print format_str.format(key, val, len(data[key]))
