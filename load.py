@@ -41,11 +41,10 @@ def seq_to_bits(vec, unique_nucleotides=None, transmission_dict=None):
     :return: number representation of vec
     """
 
-    if unique_nucleotides is None:
-        print "Problems - number of unique nucleotides not present. Exiting now."
-        sys.exit(0)
-
     if transmission_dict is None:
+        if unique_nucleotides is None:
+            print "Problems - number of unique nucleotides and transmission dictionary not present. Exiting now."
+            sys.exit(0)
         transmission_dict = {}
         for el in unique_nucleotides:
             transmission_dict[el] = [1 if x == el else 0 for x in unique_nucleotides]
@@ -92,7 +91,7 @@ def load_from_file_fasta(filename, depth=4):
             Viruses;ssRNA viruses;ssRNA negative-strand viruses;Mononegavirales;Rhabdoviridae;Ephemerovirus
 
         we want to strip it to
-            Viruses;ssRNA viruses;ssRNA negative-strand viruses;Mononegavirales;
+            Viruses;ssRNA viruses;ssRNA negative-strand viruses;Mononegavirales
 
         which is exactly of depth 4.
 
@@ -139,34 +138,66 @@ def load_from_file_fasta(filename, depth=4):
     return data, tax
 
 
-def load_data(filename, test=0.2, transmission_dict=None, seed=random.randint(0, sys.maxint), depth=4):
-    data, tax = load_from_file_fasta(filename, depth=depth)
+def load_data(filename, test=0.2, transmission_dict=None, seed=random.randint(0, sys.maxint),
+              depth=4, sample=0.2, read_size=100, onehot=True):
+    data, labels = load_from_file_fasta(filename, depth=depth)
+
+    temp_l = []
+    label_num = -1
+    tax = {}
+    for id, l in labels.iteritems():
+        if l not in temp_l:
+            temp_l.append(l)
+            label_num += 1
+        tax[id] = label_num
+
     trX = []
     trY = []
     teX = []
     teY = []
-    tr_ids = []
-    te_ids = []
 
-    oids = [int(x) for x in tax.keys()]
+    # keys must be same
+    assert data.keys() == labels.keys()
+    oids = [x for x in labels.keys()]
+    number_of_classes = len(data.keys())
 
     ss = cross_validation.LabelShuffleSplit(oids, n_iter=1, test_size=test, random_state=seed)
     for train_index, test_index in ss:
+        # we split ids to train and test
         tr_ids = list(oids[i] for i in train_index)
         te_ids = list(oids[i] for i in test_index)
 
+        # intersection of train and test must be empty set
         assert(set(tr_ids).intersection(set(te_ids)) == set())
 
+        # use only "sample" percent of data?
+
         for tr_id in tr_ids:
-            # samplamo 20% podatkov iz traina
-            class_size = int(math.ceil(len(data[tr_id]) * 0.2))
-            trX.append(random.sample(data[tr_id], class_size))
-            trY.append(tax[tr_id][0:4] * class_size)
+            seq = data[tr_id]
+            while seq:
+                if len(seq) < 100:
+                    break
+                trX.append(seq_to_bits(seq[:read_size], transmission_dict=transmission_dict))
+                trY.append(tax[tr_id])
+                seq = seq[read_size:]
 
+        for te_id in te_ids:
+            seq = data[te_id]
+            while seq:
+                if len(seq) < 100:
+                    break
+                teX.append(seq_to_bits(seq[:read_size], transmission_dict=transmission_dict))
+                teY.append(tax[te_id])
+                seq = seq[read_size:]
 
+    if onehot:
+        trY = one_hot(trY, number_of_classes)
+        teY = one_hot(teY, number_of_classes)
+    else:
+        trY = np.asarray(trY)
+        teY = np.asarray(teY)
 
-    # naloadej trX ... in vrni te fajle
-    # mogoce lahko nardim podobno k pri seq_load (da se shrani trX, teX ... podatke)
+    return np.asarray(trX), np.asarray(teX), np.asarray(trY), np.asarray(teY), number_of_classes
 
 
 #### DEPRECATED - used for csv ####
