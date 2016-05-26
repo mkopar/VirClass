@@ -1,3 +1,6 @@
+import glob
+import cPickle
+
 __author__ = 'Matej'
 
 import os
@@ -25,6 +28,11 @@ def get_gids(term="Viruses[Organism] AND srcdb_refseq[PROP] AND complete_genome"
     return id_list
 
 
+def check_hash():
+    filenames = [s.split(".")[0] for s in os.listdir(dir)]
+    return hash(str(filenames)) == hash(str(get_gids()))
+
+
 def get_rec(rec_ID):
     """
     Get record for given genome id.
@@ -32,13 +40,13 @@ def get_rec(rec_ID):
     :return: record
     """
     try:
-        rec = pickle.load(open(dir + "/%s.pkl.gz" % rec_ID, "rb"))
+        rec = cPickle.load(open(dir + "/%s.pkl.gz" % rec_ID, "rb"))
     except IOError:  # , FileNotFoundError:
         print("downloading sequence id:", rec_ID)
         handle = Entrez.efetch(db="nucleotide", rettype="gb", id=rec_ID)
         rec = SeqIO.read(handle, "gb")
         handle.close()
-        pickle.dump(rec, open(dir + "/%s.pkl.gz" % rec_ID, "wb"), -1)
+        cPickle.dump(rec, open(dir + "/%s.pkl.gz" % rec_ID, "wb"), -1)
         print("genome size:", len(rec.seq), rec.seq[:20] + "...")
         print("Taxonomy:", rec.annotations['taxonomy'])
         for a, t in rec.annotations.items():
@@ -379,7 +387,7 @@ def run():
 
 
 if __name__ == "__main__":
-    taxonomy = get_taxonomy()
+    taxonomy = get_taxonomy(get_gids())
     print "no of examples after taxonomy was built: %d" % count_examples(taxonomy)
     print "no of list nodes after taxonomy was built: %d" % count_list_nodes(taxonomy)
     print_nice(taxonomy)

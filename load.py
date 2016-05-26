@@ -12,7 +12,7 @@ from Bio.SeqRecord import SeqRecord
 import numpy as np
 import sys
 from sklearn import cross_validation
-from load_ncbi import run, load_seqs_from_ncbi, get_rec
+from load_ncbi import run, load_seqs_from_ncbi, get_rec, check_hash
 import matplotlib.pyplot as plt
 import pylab as P
 
@@ -115,7 +115,11 @@ def load_from_file_fasta(filename, depth=4):
     tax = {}
 
     try:
+        assert os.path.isfile(filename)
         with gzip.open(filename, "r") as file:
+            # if file exists, check id hash
+            assert check_hash()
+
             # read data
             print "reading..."
             for seq_record in SeqIO.parse(file, "fasta"):
@@ -124,7 +128,7 @@ def load_from_file_fasta(filename, depth=4):
                 seq = str(seq_record.seq)
                 data[oid] = seq
                 tax[oid] = classification
-    except IOError:
+    except AssertionError:
         data, tax = load_seqs_from_ncbi(seq_len=-1, skip_read=0, overlap=0)
         # save data
         with gzip.open(filename, "w") as file:
@@ -140,6 +144,14 @@ def load_from_file_fasta(filename, depth=4):
 
 def load_data(filename, test=0.2, transmission_dict=None, seed=random.randint(0, sys.maxint),
               depth=4, sample=0.2, read_size=100, onehot=True):
+
+    assert test < 1.0 and sample < 1.0
+
+    if onehot:
+        filename = "%s-%.2f-%d-%d-%.2f-%d-%s.fasta.gz" % (filename, test, seed, depth, sample, read_size, "onehot")
+    else:
+        filename = "%s-%.2f-%d-%d-%.2f-%d-%s.fasta.gz" % (filename, test, seed, depth, sample, read_size, "")
+
     data, labels = load_from_file_fasta(filename, depth=depth)
 
     temp_l = []
@@ -175,20 +187,22 @@ def load_data(filename, test=0.2, transmission_dict=None, seed=random.randint(0,
         for tr_id in tr_ids:
             seq = data[tr_id]
             while seq:
-                if len(seq) < 100:
+                if len(seq) < read_size:
                     break
                 trX.append(seq_to_bits(seq[:read_size], transmission_dict=transmission_dict))
                 trY.append(tax[tr_id])
-                seq = seq[read_size:]
+                # don't use whole sequence, only every second, third etc (depending on sample percent) - use ceil to avoid decimals
+                seq = seq[int(math.ceil(read_size / sample)):]
 
         for te_id in te_ids:
             seq = data[te_id]
             while seq:
-                if len(seq) < 100:
+                if len(seq) < read_size:
                     break
                 teX.append(seq_to_bits(seq[:read_size], transmission_dict=transmission_dict))
                 teY.append(tax[te_id])
-                seq = seq[read_size:]
+                # don't use whole sequence, only every second, third etc (depending on sample percent) - use ceil to avoid decimals
+                seq = seq[int(math.ceil(read_size / sample)):]
 
     if onehot:
         trY = one_hot(trY, number_of_classes)
@@ -459,7 +473,7 @@ def load_from_file(filename):
 
 
 if __name__ == "__main__":
-    data, tax = load_from_file_fasta("test.fasta.gz", depth=4)
+    data, tax = load_from_file_fasta("test-0.20-0-4-0.20-100-onehot.fasta.gz", depth=4)
 
     format_str = "{:11}\t{:80}\t{:7}"
 
