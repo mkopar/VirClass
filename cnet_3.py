@@ -1,11 +1,10 @@
-import math
-import sys
 import time
+import cPickle
+import numpy as np
 import theano
 from theano import tensor as T
 from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
-import numpy as np
-from load import seq_load, load_data
+from load import load_data
 from theano.tensor.nnet.conv import conv2d
 from theano.tensor.signal.downsample import max_pool_2d
 from theano.tensor.signal.downsample import DownsampleFactorMax
@@ -65,25 +64,9 @@ def RMSprop(cost, params, lr=0.001, rho=0.9, epsilon=1e-6):
         updates.append((p, p - lr * g))
     return updates
 
-# convolution: filters are moved by one position at a time, see parameter subsample=(1, 1)
-#
-# max pooling:
-#   scaling the input before applying the maxpool filter and
-#   displacement (stride) when sliding the max pool filters
-conv1_stride=4
-
-stride1=2
-downscale1=3
-
-stride2=2
-downscale2=2
-
-stride3=2
-downscale3=1
-
 def model(X, w, w2, w3, w4, p_drop_conv, p_drop_hidden):
     """
-        Here we perform convolution and everything belonging to it.
+        Perform convolution and everything belonging to it.
         Code is split into 4 "blocks" - 3 blocks of computation and last block where we have fully connected layer.
 
         In each block we perform convolution, followed by rectify activation function. After that we perform max pool
@@ -113,10 +96,25 @@ def model(X, w, w2, w3, w4, p_drop_conv, p_drop_hidden):
     pyx = softmax(T.dot(l4, w_o))
     return l1, l2, l3, l4, pyx
 
+# shranjeval bomo train
+def save_model(filename, model):
+    print "saving model..."
+    f = open(filename, 'wb')
+    cPickle.dump(model, f, protocol=cPickle.HIGHEST_PROTOCOL)
+    f.close()
+    print "model saved..."
+
+# loadamo pa filename v train
+def load_model(filename):
+    f = open(filename, 'rb')
+    loaded_obj = cPickle.load(f)
+    f.close()
+    return loaded_obj
+
 print "start:", time.strftime('%X %x %Z')
 #trX, teX, trY, teY, num_of_classes = seq_load(onehot=True, seed=7970223320302509880) # load data
 transmission_dict = {'A': [1, 0, 0, 0], 'T': [0, 1, 0, 0], 'C': [0, 0, 1, 0], 'G': [0, 0, 0, 1]}
-trX, teX, trY, teY, num_of_classes = load_data(filename="test.fasta.gz", test=0.2, transmission_dict=transmission_dict, seed=0)
+trX, teX, trY, teY, num_of_classes = load_data(filename="test", test=0.2, transmission_dict=transmission_dict, seed=0, sample=0.2)
 #X, Y, num_of_classes = ...
 #cross validation oz kakrsnokoli razporejanje (npr 80-20)
 #trX, teX, trY, teY = ...
@@ -135,7 +133,7 @@ cwin1=4*6  # multiples of 4 because of data representation
 cwin2=3
 cwin3=2
 
-num_filters_1=32 / 2 # how many different filters to learn at each layer
+num_filters_1=32 / 2  # how many different filters to learn at each layer
 num_filters_2=48 / 2
 num_filters_3=64 / 2
 w = init_weights((num_filters_1, 1, 1, cwin1)) # first convolution, 32 filters, stack size 1, 1 rows, cwin1 columns
@@ -149,6 +147,22 @@ print "cwin3 %d" % cwin3
 print "num_filters_1 %d" % num_filters_1
 print "num_filters_2 %d" % num_filters_2
 print "num_filters_3 %d" % num_filters_3
+
+# convolution: filters are moved by one position at a time, see parameter subsample=(1, 1)
+#
+# max pooling:
+#   scaling the input before applying the maxpool filter and
+#   displacement (stride) when sliding the max pool filters
+conv1_stride=4
+
+stride1=2
+downscale1=3
+
+stride2=2
+downscale2=2
+
+stride3=2
+downscale3=1
 
 # l1 conv:
 es = input_len
@@ -173,7 +187,7 @@ print "l3 es:", es
 # downscaling is performed so that we correctly set number of filters in last layer
 
 w4 = init_weights((num_filters_3 * es, 500))  # fully conected last layer, connects the outputs of 128 filters to 500 (arbitrary) hidden nodes, which are then connected to the output nodes
-w_o = init_weights((500, num_of_classes))  # stevilo koncnih razredov
+w_o = init_weights((500, num_of_classes))  # number of exptected classes
 
 noise_l1, noise_l2, noise_l3, noise_l4, noise_py_x = model(X, w, w2, w3, w4, 0.2, 0.5) # noise during training
 l1, l2, l3, l4, py_x = model(X, w, w2, w3, w4, 0., 0.) # no noise during training
@@ -194,3 +208,6 @@ for i in range(100):
     print np.mean(np.argmax(teY, axis=1) == predict(teX))
 
 print "stop:", time.strftime('%X %x %Z')
+
+# do you want to save the model?
+save_model("test_saving_model.pkl", train)
