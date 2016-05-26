@@ -210,4 +210,4 @@ for i in range(100):
 print "stop:", time.strftime('%X %x %Z')
 
 # do you want to save the model?
-save_model("test_saving_model.pkl", train)
+#save_model("test_saving_model.pkl", train)
