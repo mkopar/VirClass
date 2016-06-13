@@ -36,7 +36,7 @@ def seq_to_bits(vec, unique_nucleotides=None, transmission_dict=None):
     """
     Get sequence and transform it into number representation. Given parameters set some rules in representation.
     :param vec: sequence to transform
-    :param unique_nucleotides: number of unique nucleotides in loaded files
+    :param unique_nucleotides: number of unique nucleotides in loaded files - mandatory if transmission_dict is None
     :param transmission_dict: transmission dictionary - if None, build it here (every nucleotide represents one bit)
     :return: number representation of vec
     """
@@ -174,7 +174,7 @@ def load_data(filename, test=0.2, transmission_dict=None, depth=4, sample=0.2, r
         # intersection of train and test must be empty set
         assert(set(tr_ids).intersection(set(te_ids)) == set())
 
-        # use only "sample" percent of data?
+        # use only "sample" percent of data
 
         for tr_id in tr_ids:
             seq = data[tr_id]
@@ -217,7 +217,7 @@ def load_seqs(ids):
     return [get_rec(x).seq._data for x in ids]
 
 
-def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.maxint), thresh=0.1):
+def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.maxint), thresh=0.1, transmission_dict=None, save=False):
     """
     In this method we want to simulate sequencing. We create samples in length of seq_len (in our case 100).
 
@@ -282,9 +282,10 @@ def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.
     except IOError:
         print "data and labels not found...\ngenerating data and labels..."
         data, labels = run()
-        print "saving data and labels..."
-        pickle.dump(data, open(dir + "/data-ids.pkl.gz", "wb"), -1)
-        pickle.dump(labels, open(dir + "/labels.pkl.gz", "wb"), -1)
+        if save:
+            print "saving data and labels..."
+            pickle.dump(data, open(dir + "/data-ids.pkl.gz", "wb"), -1)
+            pickle.dump(labels, open(dir + "/labels.pkl.gz", "wb"), -1)
 
     print "getting sequences..."
     data = load_seqs(data)
@@ -355,12 +356,12 @@ def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.
                 sample_idx = random.choice(range(0, (len(data[vir_idx])) - seq_len - 1))  # randomly sample virus
 
                 if temp_count < ntrain:
-                    trX.append(seq_to_bits(data[vir_idx][sample_idx:sample_idx + seq_len]))
+                    trX.append(seq_to_bits(data[vir_idx][sample_idx:sample_idx + seq_len], transmission_dict=transmission_dict))
                     trY.append(label)
                 else:
                     if temp_count - ntrain >= ntest:
                         break
-                    teX.append(seq_to_bits(data[vir_idx][sample_idx:sample_idx + seq_len]))
+                    teX.append(seq_to_bits(data[vir_idx][sample_idx:sample_idx + seq_len], transmission_dict=transmission_dict))
                     teY.append(label)
 
                 temp_count += 1
@@ -389,20 +390,13 @@ def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.
         assert train_examples_per_class - 1 == trY.count(labels_to_process[-1][0])
         assert test_examples_per_class == teY.count(labels_to_process[-1][0])
 
-        print "saving train and test data for seed %d..." % seed
-        pickle.dump(trX, open(
-            dir + "/tr%d-data-seed_%d-onehot_%d-threshold_%d.pkl.gz" % (ntrain, seed, int(onehot), thresh * 100), "wb"),
-                    -1)
-        pickle.dump(trY, open(
-            dir + "/tr%d-labels-seed_%d-onehot_%d-threshold_%d.pkl.gz" % (ntrain, seed, int(onehot), thresh * 100),
-            "wb"), -1)
-        pickle.dump(teX, open(
-            dir + "/te%d-data-seed_%d-onehot_%d-threshold_%d.pkl.gz" % (ntest, seed, int(onehot), thresh * 100), "wb"),
-                    -1)
-        pickle.dump(teY, open(
-            dir + "/te%d-labels-seed_%d-onehot_%d-threshold_%d.pkl.gz" % (ntest, seed, int(onehot), thresh * 100),
-            "wb"), -1)
-        print "saving done"
+        if save:
+            print "saving train and test data for seed %d..." % seed
+            pickle.dump(trX, open(dir + "/tr%d-data-seed_%d-onehot_%d-threshold_%d.pkl.gz" % (ntrain, seed, int(onehot), thresh * 100), "wb"), -1)
+            pickle.dump(trY, open(dir + "/tr%d-labels-seed_%d-onehot_%d-threshold_%d.pkl.gz" % (ntrain, seed, int(onehot), thresh * 100), "wb"), -1)
+            pickle.dump(teX, open(dir + "/te%d-data-seed_%d-onehot_%d-threshold_%d.pkl.gz" % (ntest, seed, int(onehot), thresh * 100), "wb"), -1)
+            pickle.dump(teY, open(dir + "/te%d-labels-seed_%d-onehot_%d-threshold_%d.pkl.gz" % (ntest, seed, int(onehot), thresh * 100), "wb"), -1)
+            print "saving done"
 
     number_of_classes = len(set(labels))
 
@@ -465,6 +459,7 @@ def load_from_file(filename):
 
 
 if __name__ == "__main__":
+    transmission_dict = {'A': [1, 0, 0, 0], 'T': [0, 1, 0, 0], 'C': [0, 0, 1, 0], 'G': [0, 0, 0, 1]}
     data, tax = load_from_file_fasta("test-0.20-0-4-0.20-100-onehot.fasta.gz", depth=4)
 
     format_str = "{:11}\t{:80}\t{:7}"
