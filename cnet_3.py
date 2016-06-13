@@ -1,3 +1,4 @@
+import hashlib
 import time
 import cPickle
 import numpy as np
@@ -8,6 +9,7 @@ from load import load_data
 from theano.tensor.nnet.conv import conv2d
 from theano.tensor.signal.downsample import max_pool_2d
 from theano.tensor.signal.downsample import DownsampleFactorMax
+from load_ncbi import get_gids
 
 theano.config.floatX='float32'
 
@@ -112,9 +114,15 @@ def load_model(filename):
     return loaded_obj
 
 print "start:", time.strftime('%X %x %Z')
-#trX, teX, trY, teY, num_of_classes = seq_load(onehot=True, seed=7970223320302509880) # load data
 transmission_dict = {'A': [1, 0, 0, 0], 'T': [0, 1, 0, 0], 'C': [0, 0, 1, 0], 'G': [0, 0, 0, 1]}
-trX, teX, trY, teY, num_of_classes = load_data(filename="test", test=0.2, transmission_dict=transmission_dict, seed=0, sample=0.2)
+test = 0.2
+depth = 4
+sample = 0.2
+read_size = 100
+onehot = True
+seed = 0
+filename = "%s_%d_%.3f_%d_%d_%d%s" % (hashlib.md5(str(sorted(get_gids()))).hexdigest(), depth, sample, read_size, onehot, seed, ".fasta.gz")
+trX, teX, trY, teY, num_of_classes = load_data(filename=filename, test=test, depth=depth, read_size=read_size, transmission_dict=transmission_dict, sample=sample, seed=seed)
 #X, Y, num_of_classes = ...
 #cross validation oz kakrsnokoli razporejanje (npr 80-20)
 #trX, teX, trY, teY = ...
@@ -209,5 +217,8 @@ for i in range(100):
 
 print "stop:", time.strftime('%X %x %Z')
 
-# do you want to save the model?
+# do you want to save the model
 #save_model("test_saving_model.pkl", train)
+# jaz bi shranu vse variable ki jih rabimo za doloceno funkcijo (cost, updates, y_x?)
+# a je treba shranit tut cost in updates?
+# dumpaj numpy ndarrays from shared variables (w oz params)

@@ -117,9 +117,6 @@ def load_from_file_fasta(filename, depth=4):
     try:
         assert os.path.isfile(filename)
         with gzip.open(filename, "r") as file:
-            # if file exists, check id hash
-            assert check_hash()
-
             # read data
             print "reading..."
             for seq_record in SeqIO.parse(file, "fasta"):
@@ -142,17 +139,12 @@ def load_from_file_fasta(filename, depth=4):
     return data, tax
 
 
-def load_data(filename, test=0.2, transmission_dict=None, seed=random.randint(0, sys.maxint),
-              depth=4, sample=0.2, read_size=100, onehot=True):
+def load_data(filename, test=0.2, transmission_dict=None, depth=4, sample=0.2, read_size=100, onehot=True, seed=random.randint(0, sys.maxint)):
 
     assert test < 1.0 and sample < 1.0
+    dir = "media/"
 
-    if onehot:
-        filename = "%s-%.2f-%d-%d-%.2f-%d-%s.fasta.gz" % (filename, test, seed, depth, sample, read_size, "onehot")
-    else:
-        filename = "%s-%.2f-%d-%d-%.2f-%d-%s.fasta.gz" % (filename, test, seed, depth, sample, read_size, "")
-
-    data, labels = load_from_file_fasta(filename, depth=depth)
+    data, labels = load_from_file_fasta(dir + filename, depth=depth)
 
     temp_l = []
     label_num = -1
