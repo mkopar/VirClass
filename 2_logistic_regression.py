@@ -49,13 +49,23 @@ for i in range(20):
         cost = train(trX[start:end], trY[start:end])
     print i, np.mean(np.argmax(teY, axis=1) == predict(teX))
 
-save_model("models/test_saving_model_train.pkl", train)
-save_model("models/test_saving_model_predict.pkl", predict)
-
-train1 = load_model("models/test_saving_model_train.pkl")
-predict1 = load_model("models/test_saving_model_predict.pkl")
+save_model("models/cost.pkl", cost)
+save_model("models/update.pkl", update)
+save_model("models/y_pred.pkl", y_pred)
 
 for i in range(20):
     for start, end in zip(range(0, len(trX), 128), range(128, len(trX), 128)):
         cost = train(trX[start:end], trY[start:end])
     print i, np.mean(np.argmax(teY, axis=1) == predict(teX))
+
+cost1 = load_model("models/cost.pkl")
+update1 = load_model("models/update.pkl")
+y_pred1 = load_model("models/y_pred.pkl")
+
+train1 = theano.function(inputs=[X, Y], outputs=cost1, updates=update1, allow_input_downcast=True)
+predict1 = theano.function(inputs=[X], outputs=y_pred1, allow_input_downcast=True)
+
+for i in range(20):
+    for start, end in zip(range(0, len(trX), 128), range(128, len(trX), 128)):
+        cost = train1(trX[start:end], trY[start:end])
+    print i, np.mean(np.argmax(teY, axis=1) == predict1(teX))
