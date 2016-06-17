@@ -2,7 +2,7 @@ import cPickle
 import theano
 from theano import tensor as T
 import numpy as np
-from load import mnist
+from load_mnist import mnist
 
 def floatX(X):
     return np.asarray(X, dtype=theano.config.floatX)
