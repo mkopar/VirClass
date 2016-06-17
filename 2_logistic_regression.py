@@ -49,18 +49,21 @@ for i in range(20):
         cost = train(trX[start:end], trY[start:end])
     print i, np.mean(np.argmax(teY, axis=1) == predict(teX))
 
-save_model("models/cost.pkl", cost)
-save_model("models/update.pkl", update)
-save_model("models/y_pred.pkl", y_pred)
+save_model("models/w.pkl", w)
 
 for i in range(20):
     for start, end in zip(range(0, len(trX), 128), range(128, len(trX), 128)):
         cost = train(trX[start:end], trY[start:end])
     print i, np.mean(np.argmax(teY, axis=1) == predict(teX))
 
-cost1 = load_model("models/cost.pkl")
-update1 = load_model("models/update.pkl")
-y_pred1 = load_model("models/y_pred.pkl")
+print
+print "saved model"
+w1 = load_model("models/w.pkl")
+py_x1 = model(X, w1)
+cost1 = T.mean(T.nnet.categorical_crossentropy(py_x1, Y))
+gradient1 = T.grad(cost=cost1, wrt=w1)
+update1 = [[w1, w1 - gradient1 * 0.05]]
+y_pred1 = T.argmax(py_x1, axis=1)
 
 train1 = theano.function(inputs=[X, Y], outputs=cost1, updates=update1, allow_input_downcast=True)
 predict1 = theano.function(inputs=[X], outputs=y_pred1, allow_input_downcast=True)
