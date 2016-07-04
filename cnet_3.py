@@ -66,7 +66,7 @@ def RMSprop(cost, params, lr=0.001, rho=0.9, epsilon=1e-6):
         updates.append((p, p - lr * g))
     return updates
 
-def model(X, w, w2, w3, w4, p_drop_conv, p_drop_hidden):
+def model(X, w, w2, w3, w4, p_drop_conv, p_drop_hidden, w_o):
     """
         Perform convolution and everything belonging to it.
         Code is split into 4 "blocks" - 3 blocks of computation and last block where we have fully connected layer.
@@ -98,7 +98,6 @@ def model(X, w, w2, w3, w4, p_drop_conv, p_drop_hidden):
     pyx = softmax(T.dot(l4, w_o))
     return l1, l2, l3, l4, pyx
 
-# shranjeval bomo train
 def save_model(filename, model):
     print "saving model..."
     f = open(filename, 'wb')
@@ -106,119 +105,133 @@ def save_model(filename, model):
     f.close()
     print "model saved..."
 
-# loadamo pa filename v train
 def load_model(filename):
     f = open(filename, 'rb')
     loaded_obj = cPickle.load(f)
     f.close()
     return loaded_obj
 
+def load_dataset():
+    transmission_dict = {'A': [1, 0, 0, 0], 'T': [0, 1, 0, 0], 'C': [0, 0, 1, 0], 'G': [0, 0, 0, 1]}
+    test = 0.2
+    depth = 4
+    sample = 0.2
+    read_size = 100
+    onehot = True
+    seed = 0
+    filename = "%s_%d_%.3f_%d_%d_%d%s" % (hashlib.md5(str(sorted(get_gids()))).hexdigest(), depth, sample, read_size, onehot, seed, ".fasta.gz")
+    trX, teX, trY, teY, num_of_classes = load_data(filename=filename, test=test, depth=depth, read_size=read_size, transmission_dict=transmission_dict, sample=sample, seed=seed)
+    #X, Y, num_of_classes = ...
+    #cross validation oz kakrsnokoli razporejanje (npr 80-20)
+    #trX, teX, trY, teY = ...
+    return trX, teX, trY, teY, num_of_classes
+
+def init_net(num_of_classes, input_len):
+    cwin1=4*6  # multiples of 4 because of data representation
+    cwin2=3
+    cwin3=2
+
+    num_filters_1=32 / 2  # how many different filters to learn at each layer
+    num_filters_2=48 / 2
+    num_filters_3=64 / 2
+    # size of convolution windows, for each layer different values can be used
+    w = init_weights((num_filters_1, 1, 1, cwin1)) # first convolution, 32 filters, stack size 1, 1 rows, cwin1 columns
+    w2 = init_weights((num_filters_2, num_filters_1, 1, cwin2)) # second convolution, 64 filters, stack size 32 (one stack for each filter from previous layer), 1 row, cwin2 columns
+    w3 = init_weights((num_filters_3, num_filters_2, 1, cwin3)) # third convolution, 128 filters, stack size 64 (one stack for each filter from previous layes), 1 row, cwin3 columns
+
+    print "#### CONVOLUTION PARAMETERS ####"
+    print "cwin1 %d" % cwin1
+    print "cwin2 %d" % cwin2
+    print "cwin3 %d" % cwin3
+    print "num_filters_1 %d" % num_filters_1
+    print "num_filters_2 %d" % num_filters_2
+    print "num_filters_3 %d" % num_filters_3
+
+    # convolution: filters are moved by one position at a time, see parameter subsample=(1, 1)
+    #
+    # max pooling:
+    #   scaling the input before applying the maxpool filter and
+    #   displacement (stride) when sliding the max pool filters
+
+    # l1 conv:
+    es = input_len
+    es = (es - cwin1 + 1)
+    es = es / conv1_stride
+    # l1 max_pool:
+    es = DownsampleFactorMax.out_shape((1, es), (1, downscale1), st=(1, stride1))[1] # downscale for first layer
+    print "l1 es:", es
+
+    # l2 conv:
+    es = (es - cwin2 + 1)
+    # l2 max_pool:
+    es = DownsampleFactorMax.out_shape((1, es), (1, downscale2), st=(1, stride2))[1] # downscale for second layer
+    print "l2 es:", es
+
+    # l3 conv:
+    es = (es - cwin3 + 1)
+    # l3 max_pool:
+    es = DownsampleFactorMax.out_shape((1, es), (1, downscale3), st=(1, stride3))[1] # downscale for third layer
+    print "l3 es:", es
+
+    # downscaling is performed so that we correctly set number of filters in last layer
+
+    w4 = init_weights((num_filters_3 * es, 500))  # fully conected last layer, connects the outputs of 128 filters to 500 (arbitrary) hidden nodes, which are then connected to the output nodes
+    w_o = init_weights((500, num_of_classes))  # number of exptected classes
+
+    # matrix types
+    X = T.ftensor4()
+    Y = T.fmatrix()
+
+    noise_l1, noise_l2, noise_l3, noise_l4, noise_py_x = model(X, w, w2, w3, w4, 0.2, 0.5, w_o)
+    l1, l2, l3, l4, py_x = model(X, w, w2, w3, w4, 0., 0., w_o)
+    y_x = T.argmax(py_x, axis=1)  # maxima predictions
+
+    cost = T.mean(T.nnet.categorical_crossentropy(noise_py_x, Y)) # classification matrix to optimize - maximize the value that is actually there and minimize the others
+    params = [w, w2, w3, w4, w_o]
+    updates = RMSprop(cost, params, lr=0.001) # update function
+
+    return params, X, Y, cost, updates, y_x
+
 print "start:", time.strftime('%X %x %Z')
-transmission_dict = {'A': [1, 0, 0, 0], 'T': [0, 1, 0, 0], 'C': [0, 0, 1, 0], 'G': [0, 0, 0, 1]}
-test = 0.2
-depth = 4
-sample = 0.2
-read_size = 100
-onehot = True
-seed = 0
-filename = "%s_%d_%.3f_%d_%d_%d%s" % (hashlib.md5(str(sorted(get_gids()))).hexdigest(), depth, sample, read_size, onehot, seed, ".fasta.gz")
-trX, teX, trY, teY, num_of_classes = load_data(filename=filename, test=test, depth=depth, read_size=read_size, transmission_dict=transmission_dict, sample=sample, seed=seed)
-#X, Y, num_of_classes = ...
-#cross validation oz kakrsnokoli razporejanje (npr 80-20)
-#trX, teX, trY, teY = ...
+
+trX, teX, trY, teY, num_of_classes = load_dataset()
 
 print(trX.shape)
 input_len = trX.shape[1] # save input length for further use
 trX = trX.reshape(-1, 1, 1, input_len)
 teX = teX.reshape(-1, 1, 1, input_len)
 
-# matrix types
-X = T.ftensor4()
-Y = T.fmatrix()
-
-# size of convolution windows, for each layer different values can be used
-cwin1=4*6  # multiples of 4 because of data representation
-cwin2=3
-cwin3=2
-
-num_filters_1=32 / 2  # how many different filters to learn at each layer
-num_filters_2=48 / 2
-num_filters_3=64 / 2
-w = init_weights((num_filters_1, 1, 1, cwin1)) # first convolution, 32 filters, stack size 1, 1 rows, cwin1 columns
-w2 = init_weights((num_filters_2, num_filters_1, 1, cwin2)) # second convolution, 64 filters, stack size 32 (one stack for each filter from previous layer), 1 row, cwin2 columns
-w3 = init_weights((num_filters_3, num_filters_2, 1, cwin3)) # third convolution, 128 filters, stack size 64 (one stack for each filter from previous layes), 1 row, cwin3 columns
-
-print "#### CONVOLUTION PARAMETERS ####"
-print "cwin1 %d" % cwin1
-print "cwin2 %d" % cwin2
-print "cwin3 %d" % cwin3
-print "num_filters_1 %d" % num_filters_1
-print "num_filters_2 %d" % num_filters_2
-print "num_filters_3 %d" % num_filters_3
-
-# convolution: filters are moved by one position at a time, see parameter subsample=(1, 1)
-#
-# max pooling:
-#   scaling the input before applying the maxpool filter and
-#   displacement (stride) when sliding the max pool filters
 conv1_stride=4
-
 stride1=2
 downscale1=3
-
 stride2=2
 downscale2=2
-
 stride3=2
 downscale3=1
 
-# l1 conv:
-es = input_len
-es = (es - cwin1 + 1)
-es = es / conv1_stride
-# l1 max_pool:
-es = DownsampleFactorMax.out_shape((1, es), (1, downscale1), st=(1, stride1))[1] # downscale for first layer
-print "l1 es:", es
-
-# l2 conv:
-es = (es - cwin2 + 1)
-# l2 max_pool:
-es = DownsampleFactorMax.out_shape((1, es), (1, downscale2), st=(1, stride2))[1] # downscale for second layer
-print "l2 es:", es
-
-# l3 conv:
-es = (es - cwin3 + 1)
-# l3 max_pool:
-es = DownsampleFactorMax.out_shape((1, es), (1, downscale3), st=(1, stride3))[1] # downscale for third layer
-print "l3 es:", es
-
-# downscaling is performed so that we correctly set number of filters in last layer
-
-w4 = init_weights((num_filters_3 * es, 500))  # fully conected last layer, connects the outputs of 128 filters to 500 (arbitrary) hidden nodes, which are then connected to the output nodes
-w_o = init_weights((500, num_of_classes))  # number of exptected classes
-
-noise_l1, noise_l2, noise_l3, noise_l4, noise_py_x = model(X, w, w2, w3, w4, 0.2, 0.5) # noise during training
-l1, l2, l3, l4, py_x = model(X, w, w2, w3, w4, 0., 0.) # no noise during training
-y_x = T.argmax(py_x, axis=1) # maxima predictions
-
-
-cost = T.mean(T.nnet.categorical_crossentropy(noise_py_x, Y)) # classification matrix to optimize - maximize the value that is actually there and minimize the others
-params = [w, w2, w3, w4, w_o]
-updates = RMSprop(cost, params, lr=0.001) # update function
+params, X, Y, cost, updates, y_x = init_net(num_of_classes, input_len)
 
 train = theano.function(inputs=[X, Y], outputs=cost, updates=updates, allow_input_downcast=True) # compile train function
 predict = theano.function(inputs=[X], outputs=y_x, allow_input_downcast=True) # compile predict function
 
-# testing
-for i in range(100):
+# TODO testing - ne evaluiraj modela na testnih podatkih, ampak razdeli ucno mnozico na 2 dela
+epsilon = 0.005  # ce se score ne zveca v 5 poskusih vsaj za 0,5%, potem nehamo
+best_score = -1
+count_best = 5
+iter = 10
+for i in range(iter):
     for start, end in zip(range(0, len(trX), 128), range(128, len(trX), 128)):
         cost = train(trX[start:end], trY[start:end])
-    print np.mean(np.argmax(teY, axis=1) == predict(teX))
+    curr_score = np.mean(np.argmax(teY, axis=1) == predict(teX))
+    print curr_score
+    if count_best == 0:
+        break
+    elif curr_score > (best_score + epsilon):
+        best_score = curr_score
+        count_best = 5  # reset counter
+    else:
+        count_best -= 1
+
+save_model("models/params.pkl", params)
 
 print "stop:", time.strftime('%X %x %Z')
-
-# do you want to save the model
-#save_model("test_saving_model.pkl", train)
-# jaz bi shranu vse variable ki jih rabimo za doloceno funkcijo (cost, updates, y_x?)
-# a je treba shranit tut cost in updates?
-# dumpaj numpy ndarrays from shared variables (w oz params)
