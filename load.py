@@ -111,7 +111,7 @@ def histogram(values, name):
     plt.clf()
 
 
-def load_from_file_fasta(filename, depth=4):
+def load_from_file_fasta(filename, depth=4, taxonomy_el_count=-1):
     """
     Load data from filename. Default value for depth is 4 - this is depth in classification.
 
@@ -136,6 +136,7 @@ def load_from_file_fasta(filename, depth=4):
 
     :param filename: filename of fasta file
     :param depth: default value 4, how deep into classification we want to train
+    :param taxonomy_el_count: how many elements we want in taxonomy; -1 means whole taxonomy
     :return: data and tax - data represents sequences, taxonomy represents classification (for each genome ID)
     """
 
@@ -154,7 +155,7 @@ def load_from_file_fasta(filename, depth=4):
                 data[oid] = seq
                 tax[oid] = classification
     except AssertionError:
-        data, tax = load_seqs_from_ncbi(seq_len=-1, skip_read=0, overlap=0)
+        data, tax = load_seqs_from_ncbi(seq_len=-1, skip_read=0, overlap=0, taxonomy_el_count=taxonomy_el_count)
         # save data
         with gzip.open(filename, "w") as file:
             print "writing..."
@@ -167,15 +168,30 @@ def load_from_file_fasta(filename, depth=4):
     return data, tax
 
 
-def load_data(filename, test=0.2, transmission_dict=None, depth=4, sample=0.2, read_size=100, onehot=True, seed=random.randint(0, sys.maxint)):
+def dataset_from_id(data, tax, ids, read_size, sample, transmission_dict):
+    tempX = []
+    tempY = []
+    for te_id in ids:
+        seq = data[te_id]
+        while seq:
+            if len(seq) < read_size:
+                break
+            tempX.append(seq_to_bits(seq[:read_size], transmission_dict=transmission_dict))
+            tempY.append(tax[te_id])
+            # don't use whole sequence, only every second, third etc (depending on sample percent) - use ceil to avoid decimals
+            seq = seq[int(math.ceil(read_size / sample)):]
+    return tempX, tempY
+
+def load_data(filename, test=0.2, transmission_dict=None, depth=4, sample=0.2, read_size=100, onehot=True, seed=random.randint(0, sys.maxint), taxonomy_el_count=-1):
     """
     Main function for loading data. We expect, that fasta files with data are in media directory - if the file with
     given filename does not exist, we build a new one from NCBI database.
     Then we build numeric taxonomy representation.
     With sklearn function LabelShuffleSplit we split whole dataset into train and test set. When built, test and train
     datasets are saved for later use.
-    We want to evaluate our model with train data, so we split train data into two parts (with LabelShuffleSplit function).
-    Given params set some rules for building.
+    We want to evaluate our model only with train data, so we split train data into two parts
+    (with LabelShuffleSplit function) by 80-20.
+    The params helps you set some rules for building the data you want.
     :param filename: dataset filename (which MUST be in media directory, otherwise new will be built)
     :param test: test size in percentage of whole dataset
     :param transmission_dict: dictionary for transforming nucleotides to bits (seq_to_bits function)
@@ -184,13 +200,15 @@ def load_data(filename, test=0.2, transmission_dict=None, depth=4, sample=0.2, r
     :param read_size: chunk size
     :param onehot: binary representation of true classes
     :param seed: random seed for replicating experiments
+    :param taxonomy_el_count: how many elements we want in taxonomy; -1 means whole taxonomy
     :return: train and test datasets as numpy arrays
     """
+
     assert test < 1.0 and sample < 1.0
     dir = "media/"
 
     # load data from fasta file
-    data, labels = load_from_file_fasta(dir + filename, depth=depth)
+    data, labels = load_from_file_fasta(dir + filename, depth=depth, taxonomy_el_count=taxonomy_el_count)
 
     # taxonomy annotations to numeric representation (from 0 to num_of_classes)
     temp_l = []
@@ -206,6 +224,8 @@ def load_data(filename, test=0.2, transmission_dict=None, depth=4, sample=0.2, r
     trY = []
     teX = []
     teY = []
+    trteX = []
+    trteY = []
 
     # keys must be same
     assert data.keys() == labels.keys()
@@ -216,21 +236,32 @@ def load_data(filename, test=0.2, transmission_dict=None, depth=4, sample=0.2, r
     for train_index, test_index in ss:
         # we split ids to train and test
         tr_ids = list(oids[i] for i in train_index)
-        # TODO - split tr_ids into 2 sets - trtr and trte
         te_ids = list(oids[i] for i in test_index)
 
         # intersection of train and test must be empty set
         assert(set(tr_ids).intersection(set(te_ids)) == set())
 
-        # use only "sample" percent of data
+        # get train test IDs for evaluating model
+        ss_tr = cross_validation.LabelShuffleSplit(tr_ids, n_iter=1, test_size=0.2, random_state=seed)
+        for train_train_index, train_test_index in ss_tr:
+            trtr_ids = list(tr_ids[i] for i in train_train_index)
+            trte_ids = list(tr_ids[i] for i in train_test_index)
 
+        # use only "sample" percent of data
         for tr_id in tr_ids:
             seq = data[tr_id]
             while seq:
                 if len(seq) < read_size:
                     break
-                trX.append(seq_to_bits(seq[:read_size], transmission_dict=transmission_dict))
-                trY.append(tax[tr_id])
+                if tr_id in trte_ids:
+                    trteX.append(seq_to_bits(seq[:read_size], transmission_dict=transmission_dict))
+                    trteY.append(tax[tr_id])
+                elif tr_id in trtr_ids:
+                    trX.append(seq_to_bits(seq[:read_size], transmission_dict=transmission_dict))
+                    trY.append(tax[tr_id])
+                else:
+                    print tr_id + " is not in train_index list!"
+                    sys.exit(0)
                 # don't use whole sequence, only every second, third etc (depending on sample percent) - use ceil to avoid decimals
                 seq = seq[int(math.ceil(read_size / sample)):]
 
@@ -244,9 +275,13 @@ def load_data(filename, test=0.2, transmission_dict=None, depth=4, sample=0.2, r
                 # don't use whole sequence, only every second, third etc (depending on sample percent) - use ceil to avoid decimals
                 seq = seq[int(math.ceil(read_size / sample)):]
 
-        # TODO - add trtr and trte code
+        tmpteX, tmpteY = dataset_from_id(data, tax, te_ids, read_size, sample, transmission_dict)
+        tmptrX, tmptrY = dataset_from_id(data, tax, trtr_ids, read_size, sample, transmission_dict)
+        tmptrteX, tmptrteY = dataset_from_id(data, tax, trte_ids, read_size, sample, transmission_dict)
 
-        # TODO - add saving of train and test data (only trtr, not trte - this is for evaluating model before saving)
+        assert teX == tmpteX and teY == tmpteY
+        assert trX == tmptrX and trY == tmptrY
+        assert trteX == tmptrteX and trteY == tmptrteY
 
     if onehot:
         trY = one_hot(trY, number_of_classes)
@@ -255,7 +290,10 @@ def load_data(filename, test=0.2, transmission_dict=None, depth=4, sample=0.2, r
         trY = np.asarray(trY)
         teY = np.asarray(teY)
 
-    return np.asarray(trX), np.asarray(teX), np.asarray(trY), np.asarray(teY), number_of_classes
+    # TODO - add saving of train and test data (only trtr, not trte - this is for evaluating model before saving)
+    # set filenames for saving like filename-trX, filename-teX...
+
+    return np.asarray(trX), np.asarray(teX), np.asarray(trY), np.asarray(teY), np.asarray(trteX), np.asarray(trteY), number_of_classes
 
 
 #### DEPRECATED - used for csv ####

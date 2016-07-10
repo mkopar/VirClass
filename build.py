@@ -1,7 +1,9 @@
 import hashlib
+import random
 import time
 import cPickle
 import numpy as np
+import sys
 import theano
 from theano import tensor as T
 from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
@@ -112,7 +114,7 @@ def save_model(filename, model):
     f.close()
     print "model saved..."
 
-def load_dataset(filename):
+def load_dataset(filename, debug=False):
     """
     Function for loading dataset before initializing neural network and evaluating the model.
     If you get/build dataset in fasta format beforehand, provide filename in argument when calling build.py. We expect
@@ -129,11 +131,19 @@ def load_dataset(filename):
     sample = 0.2
     read_size = 100
     onehot = True
-    seed = 0
+    # taxonomy_el_count = 20 and seed = 0 for debug only
+    if debug:
+        seed = 0
+        taxonomy_el_count = 20
+    else:
+        seed = random.randint(0, sys.maxint)
+        taxonomy_el_count = -1
     if not filename:
-        filename = "%s_%d_%.3f_%d_%d_%d%s" % (hashlib.md5(str(sorted(get_gids()))).hexdigest(), depth, sample, read_size, onehot, seed, ".fasta.gz")
-    trX, teX, trY, teY, num_of_classes = load_data(filename=filename, test=test, depth=depth, read_size=read_size, transmission_dict=transmission_dict, sample=sample, seed=seed)
-    return trX, teX, trY, teY, num_of_classes
+        filename = "%s_%d_%.3f_%d_%d_%d_%d%s" % (hashlib.md5(str(sorted(get_gids()))).hexdigest(), depth, sample, read_size, onehot, seed, taxonomy_el_count, ".fasta.gz")
+    trX, teX, trY, teY, trteX, trteY, num_of_classes = load_data(filename=filename, test=test, depth=depth,
+                                                                 read_size=read_size, transmission_dict=transmission_dict,
+                                                                 sample=sample, seed=seed, taxonomy_el_count=taxonomy_el_count)
+    return trX, teX, trY, teY, trteX, trteY, num_of_classes
 
 def init_net(num_of_classes, input_len):
     """
@@ -215,7 +225,7 @@ start = time.gmtime(0)
 # TODO - parse filename argument
 filename = ""
 
-trX, teX, trY, teY, num_of_classes = load_dataset(filename)
+trX, teX, trY, teY, trteX, trteY, num_of_classes = load_dataset(filename, debug=True)
 
 print(trX.shape)
 input_len = trX.shape[1] # save input length for further use
@@ -237,7 +247,6 @@ params, X, Y, cost, updates, y_x = init_net(num_of_classes, input_len)
 train = theano.function(inputs=[X, Y], outputs=cost, updates=updates, allow_input_downcast=True)
 predict = theano.function(inputs=[X], outputs=y_x, allow_input_downcast=True)
 
-# TODO testing - ne evaluiraj modela na testnih podatkih, ampak razdeli ucno mnozico na 2 dela
 epsilon = 0.005  # if evaluation score does not improve for 0,5% every 5 tries, then stop evaluating - we get best model
 best_score = -1
 count_best = 10
@@ -245,7 +254,8 @@ iter = 100
 for i in range(iter):
     for start, end in zip(range(0, len(trX), 128), range(128, len(trX), 128)):
         cost = train(trX[start:end], trY[start:end])
-    curr_score = (np.mean(np.argmax(teY, axis=1) == predict(teX)))
+    # evaluate model on train_test data, not on test data!
+    curr_score = (np.mean(np.argmax(trteY, axis=1) == predict(trteX)))
     print "%.5f" % curr_score
     if count_best == 0:
         break

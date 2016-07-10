@@ -179,7 +179,7 @@ def load_whole_taxonomy():
     return data, label_n
 
 
-def get_taxonomy(id_list):
+def get_taxonomy(id_list, count=-1):
     # call: python get_viral_sequence.py>log.out 2>log.err
 
     # all virus sequences
@@ -190,11 +190,12 @@ def get_taxonomy(id_list):
 
     """
     Build taxonomy from Entrez search.
+    :param count: how many elements we want in taxonomy; -1 means whole taxonomy
     :return: taxonomy
     """
 
     taxonomy = rec_dd()
-    count = 0
+    temp_count = 0
     for genome_id in id_list:
         try:
             rec = get_rec(genome_id)
@@ -202,9 +203,10 @@ def get_taxonomy(id_list):
             if not in_filter:
                 update_taxonomy(taxonomy, rec.annotations["taxonomy"], rec)
 
-            if count == 20:
-                break
-            count += 1
+                if count != -1:
+                    if temp_count == count:
+                        break
+                    temp_count += 1
         except Exception as e:
             print("problems...")
             print e
@@ -336,18 +338,19 @@ def get_all_nodes(taxonomy, parent=""):
 
 ##############   OTHER   ##############
 
-def load_seqs_from_ncbi(seq_len=100, skip_read=0, overlap=50):
+def load_seqs_from_ncbi(seq_len=100, skip_read=0, overlap=50, taxonomy_el_count=-1):
     """
     Prepare sequences, sliced to seq_len length. Skip every skip_read and overlap two reads with overlap nucleotides.
     Overlap 50 means that half of the read is going to be overlapped with next read.
-    If seq_len is -1, load whole sequences (do not strip them).
+    If seq_len is -1, load whole sequences (do not strip them) - usually using with fasta format as we slice sequences later.
     :param seq_len: read length
     :param skip_read: number of skipped reads
     :param overlap: overlapping nucleotides count
+    :param taxonomy_el_count: how many elements we want in taxonomy; -1 means whole taxonomy
     :return:    dictionary reads - each genome ID key contains list of reads for specific genome,
                 dictionary taxonomy - each genome ID key contains taxonomy for specific genome
     """
-    data, labels = run()
+    data, labels = run(taxonomy_el_count)
     print "getting sequences..."
     seqs, tax = load_oid_seq_classification(data)
 
@@ -367,12 +370,13 @@ def load_seqs_from_ncbi(seq_len=100, skip_read=0, overlap=50):
     return reads, tax
 
 
-def run():
+def run(taxonomy_el_count=-1):
     """
     Build taxonomy and get list ids and labels.
+    :param taxonomy_el_count: how many elements we want in taxonomy; -1 means whole taxonomy
     :return: data, label
     """
-    taxonomy = get_taxonomy(get_gids())
+    taxonomy = get_taxonomy(get_gids(), count=taxonomy_el_count)
     # remove_lists(taxonomy)
     list_nodes = get_list_nodes_ids_labels(taxonomy)
     data, labels = zip(*list_nodes)
