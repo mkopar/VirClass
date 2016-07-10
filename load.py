@@ -225,6 +225,7 @@ def load_data(filename, test=0.2, transmission_dict=None, depth=4, sample=0.2, r
     data, labels = load_from_file_fasta(dir + filename, depth=depth, taxonomy_el_count=taxonomy_el_count)
 
     try:
+        raise IOError
         # we save files as something.fasta.gz, so we try to open those files - if they don't exist, generate new ones
         trX = load_dataset(dir + filename[:filename.index(".fasta.gz")] + "-trX.fasta.gz")
         trY = load_dataset(dir + filename[:filename.index(".fasta.gz")] + "-trY.fasta.gz")
@@ -322,9 +323,11 @@ def load_data(filename, test=0.2, transmission_dict=None, depth=4, sample=0.2, r
     if onehot:
         trY = one_hot(trY, number_of_classes)
         teY = one_hot(teY, number_of_classes)
+        trteY = one_hot(trteY, number_of_classes)
     else:
         trY = np.asarray(trY)
         teY = np.asarray(teY)
+        trteY = np.asarray(trteY)
 
     return np.asarray(trX), np.asarray(teX), np.asarray(trY), np.asarray(teY), np.asarray(trteX), np.asarray(trteY), number_of_classes
 
