@@ -100,8 +100,9 @@ def model(X, w, w2, w3, w4, p_drop_conv, p_drop_hidden, w_o):
 
 def save_model(filename, model):
     """
-    Get name of the file where you want to save the model.
-    :param filename: name of the file - must include directory, otherwise it will be saved in current directory
+    Get name of the file where you want to save the model. We expect here directory to be provided in filename, otherwise
+    it will be saved in current directory.
+    :param filename: directory / filename
     :param model: model to be saved
     :return: None
     """
