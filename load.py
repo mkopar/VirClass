@@ -182,6 +182,18 @@ def dataset_from_id(data, tax, ids, read_size, sample, transmission_dict):
             seq = seq[int(math.ceil(read_size / sample)):]
     return tempX, tempY
 
+
+def load_dataset(filename):
+    with gzip.open(filename, "rb") as f:
+        return pickle.load(f)
+
+
+def save_dataset(filename, obj):
+    with gzip.open(filename, "wb") as f:
+        pickle.dump(obj, f)
+    print "Successfully saved as: " + filename
+
+
 def load_data(filename, test=0.2, transmission_dict=None, depth=4, sample=0.2, read_size=100, onehot=True, seed=random.randint(0, sys.maxint), taxonomy_el_count=-1):
     """
     Main function for loading data. We expect, that fasta files with data are in media directory - if the file with
@@ -190,7 +202,9 @@ def load_data(filename, test=0.2, transmission_dict=None, depth=4, sample=0.2, r
     With sklearn function LabelShuffleSplit we split whole dataset into train and test set. When built, test and train
     datasets are saved for later use.
     We want to evaluate our model only with train data, so we split train data into two parts
-    (with LabelShuffleSplit function) by 80-20.
+    (with LabelShuffleSplit function) by 80-20. Files tr_ (trX and trY) are actually trtr_ (train from train - so we
+    are going to train our model ONLY on this data). With files trte_ we are going to evaluate our model for saving,
+    and with te_ files we are going to actually predict final classes.
     The params helps you set some rules for building the data you want.
     :param filename: dataset filename (which MUST be in media directory, otherwise new will be built)
     :param test: test size in percentage of whole dataset
@@ -207,81 +221,103 @@ def load_data(filename, test=0.2, transmission_dict=None, depth=4, sample=0.2, r
     assert test < 1.0 and sample < 1.0
     dir = "media/"
 
-    # load data from fasta file
+    # load data from fasta file - we need it here because of num_of_classes - we only can get this from labels/data dict
     data, labels = load_from_file_fasta(dir + filename, depth=depth, taxonomy_el_count=taxonomy_el_count)
 
-    # taxonomy annotations to numeric representation (from 0 to num_of_classes)
-    temp_l = []
-    label_num = -1
-    tax = {}
-    for id, l in labels.iteritems():
-        if l not in temp_l:
-            temp_l.append(l)
-            label_num += 1
-        tax[id] = label_num
+    try:
+        # we save files as something.fasta.gz, so we try to open those files - if they don't exist, generate new ones
+        trX = load_dataset(dir + filename[:filename.index(".fasta.gz")] + "-trX.fasta.gz")
+        trY = load_dataset(dir + filename[:filename.index(".fasta.gz")] + "-trY.fasta.gz")
+        teX = load_dataset(dir + filename[:filename.index(".fasta.gz")] + "-teX.fasta.gz")
+        teY = load_dataset(dir + filename[:filename.index(".fasta.gz")] + "-teY.fasta.gz")
+        trteX = load_dataset(dir + filename[:filename.index(".fasta.gz")] + "-trteX.fasta.gz")
+        trteY = load_dataset(dir + filename[:filename.index(".fasta.gz")] + "-trteY.fasta.gz")
+    except IOError:
+        # data, labels = load_from_file_fasta(dir + filename, depth=depth, taxonomy_el_count=taxonomy_el_count)
 
-    trX = []
-    trY = []
-    teX = []
-    teY = []
-    trteX = []
-    trteY = []
+        # taxonomy annotations to numeric representation (from 0 to num_of_classes)
+        temp_l = []
+        label_num = -1
+        tax = {}
+        for id, l in labels.iteritems():
+            if l not in temp_l:
+                temp_l.append(l)
+                label_num += 1
+            tax[id] = label_num
 
-    # keys must be same
+        trX = []
+        trY = []
+        teX = []
+        teY = []
+        trteX = []
+        trteY = []
+
+        # keys must be same
+        assert data.keys() == labels.keys()
+        oids = [x for x in labels.keys()]
+        number_of_classes = len(data.keys())
+
+        ss = cross_validation.LabelShuffleSplit(oids, n_iter=1, test_size=test, random_state=seed)
+        for train_index, test_index in ss:
+            # we split ids to train and test
+            tr_ids = list(oids[i] for i in train_index)
+            te_ids = list(oids[i] for i in test_index)
+
+            # intersection of train and test must be empty set
+            assert(set(tr_ids).intersection(set(te_ids)) == set())
+
+            # get train test IDs for evaluating model
+            ss_tr = cross_validation.LabelShuffleSplit(tr_ids, n_iter=1, test_size=0.2, random_state=seed)
+            for train_train_index, train_test_index in ss_tr:
+                trtr_ids = list(tr_ids[i] for i in train_train_index)
+                trte_ids = list(tr_ids[i] for i in train_test_index)
+
+            # use only "sample" percent of data
+            for tr_id in tr_ids:
+                seq = data[tr_id]
+                while seq:
+                    if len(seq) < read_size:
+                        break
+                    if tr_id in trte_ids:
+                        trteX.append(seq_to_bits(seq[:read_size], transmission_dict=transmission_dict))
+                        trteY.append(tax[tr_id])
+                    elif tr_id in trtr_ids:
+                        trX.append(seq_to_bits(seq[:read_size], transmission_dict=transmission_dict))
+                        trY.append(tax[tr_id])
+                    else:
+                        print tr_id + " is not in train_index list!"
+                        sys.exit(0)
+                    # don't use whole sequence, only every second, third etc (depending on sample percent) - use ceil to avoid decimals
+                    seq = seq[int(math.ceil(read_size / sample)):]
+
+            for te_id in te_ids:
+                seq = data[te_id]
+                while seq:
+                    if len(seq) < read_size:
+                        break
+                    teX.append(seq_to_bits(seq[:read_size], transmission_dict=transmission_dict))
+                    teY.append(tax[te_id])
+                    # don't use whole sequence, only every second, third etc (depending on sample percent) - use ceil to avoid decimals
+                    seq = seq[int(math.ceil(read_size / sample)):]
+
+            tmpteX, tmpteY = dataset_from_id(data, tax, te_ids, read_size, sample, transmission_dict)
+            tmptrX, tmptrY = dataset_from_id(data, tax, trtr_ids, read_size, sample, transmission_dict)
+            tmptrteX, tmptrteY = dataset_from_id(data, tax, trte_ids, read_size, sample, transmission_dict)
+
+            assert teX == tmpteX and teY == tmpteY
+            assert trX == tmptrX and trY == tmptrY
+            assert trteX == tmptrteX and trteY == tmptrteY
+
+            # set filenames for saving like filename-trX, filename-teX...
+            save_dataset(dir + filename[:filename.index(".fasta.gz")] + "-trX.fasta.gz", trX)
+            save_dataset(dir + filename[:filename.index(".fasta.gz")] + "-trY.fasta.gz", trY)
+            save_dataset(dir + filename[:filename.index(".fasta.gz")] + "-teX.fasta.gz", teX)
+            save_dataset(dir + filename[:filename.index(".fasta.gz")] + "-teY.fasta.gz", teY)
+            save_dataset(dir + filename[:filename.index(".fasta.gz")] + "-trteX.fasta.gz", trteX)
+            save_dataset(dir + filename[:filename.index(".fasta.gz")] + "-trteY.fasta.gz", trteY)
+
     assert data.keys() == labels.keys()
-    oids = [x for x in labels.keys()]
     number_of_classes = len(data.keys())
-
-    ss = cross_validation.LabelShuffleSplit(oids, n_iter=1, test_size=test, random_state=seed)
-    for train_index, test_index in ss:
-        # we split ids to train and test
-        tr_ids = list(oids[i] for i in train_index)
-        te_ids = list(oids[i] for i in test_index)
-
-        # intersection of train and test must be empty set
-        assert(set(tr_ids).intersection(set(te_ids)) == set())
-
-        # get train test IDs for evaluating model
-        ss_tr = cross_validation.LabelShuffleSplit(tr_ids, n_iter=1, test_size=0.2, random_state=seed)
-        for train_train_index, train_test_index in ss_tr:
-            trtr_ids = list(tr_ids[i] for i in train_train_index)
-            trte_ids = list(tr_ids[i] for i in train_test_index)
-
-        # use only "sample" percent of data
-        for tr_id in tr_ids:
-            seq = data[tr_id]
-            while seq:
-                if len(seq) < read_size:
-                    break
-                if tr_id in trte_ids:
-                    trteX.append(seq_to_bits(seq[:read_size], transmission_dict=transmission_dict))
-                    trteY.append(tax[tr_id])
-                elif tr_id in trtr_ids:
-                    trX.append(seq_to_bits(seq[:read_size], transmission_dict=transmission_dict))
-                    trY.append(tax[tr_id])
-                else:
-                    print tr_id + " is not in train_index list!"
-                    sys.exit(0)
-                # don't use whole sequence, only every second, third etc (depending on sample percent) - use ceil to avoid decimals
-                seq = seq[int(math.ceil(read_size / sample)):]
-
-        for te_id in te_ids:
-            seq = data[te_id]
-            while seq:
-                if len(seq) < read_size:
-                    break
-                teX.append(seq_to_bits(seq[:read_size], transmission_dict=transmission_dict))
-                teY.append(tax[te_id])
-                # don't use whole sequence, only every second, third etc (depending on sample percent) - use ceil to avoid decimals
-                seq = seq[int(math.ceil(read_size / sample)):]
-
-        tmpteX, tmpteY = dataset_from_id(data, tax, te_ids, read_size, sample, transmission_dict)
-        tmptrX, tmptrY = dataset_from_id(data, tax, trtr_ids, read_size, sample, transmission_dict)
-        tmptrteX, tmptrteY = dataset_from_id(data, tax, trte_ids, read_size, sample, transmission_dict)
-
-        assert teX == tmpteX and teY == tmpteY
-        assert trX == tmptrX and trY == tmptrY
-        assert trteX == tmptrteX and trteY == tmptrteY
 
     if onehot:
         trY = one_hot(trY, number_of_classes)
@@ -289,9 +325,6 @@ def load_data(filename, test=0.2, transmission_dict=None, depth=4, sample=0.2, r
     else:
         trY = np.asarray(trY)
         teY = np.asarray(teY)
-
-    # TODO - add saving of train and test data (only trtr, not trte - this is for evaluating model before saving)
-    # set filenames for saving like filename-trX, filename-teX...
 
     return np.asarray(trX), np.asarray(teX), np.asarray(trY), np.asarray(teY), np.asarray(trteX), np.asarray(trteY), number_of_classes
 
