@@ -139,7 +139,8 @@ def load_dataset(filename, debug=False):
         seed = random.randint(0, sys.maxint)
         taxonomy_el_count = -1
     if not filename:
-        filename = "%s_%d_%.3f_%d_%d_%d_%d%s" % (hashlib.md5(str(sorted(get_gids()))).hexdigest(), depth, sample, read_size, onehot, seed, taxonomy_el_count, ".fasta.gz")
+        filename = "%s_%d_%.3f_%d_%d_%d_%d%s" % (hashlib.md5(str(sorted(get_gids()))).hexdigest(), depth, sample, read_size, onehot,
+                                                 seed, taxonomy_el_count, ".fasta.gz")
     trX, teX, trY, teY, trteX, trteY, num_of_classes = load_data(filename=filename, test=test, depth=depth,
                                                                  read_size=read_size, transmission_dict=transmission_dict,
                                                                  sample=sample, seed=seed, taxonomy_el_count=taxonomy_el_count)
