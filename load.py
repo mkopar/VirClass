@@ -7,12 +7,11 @@ import random
 import math
 from Bio import SeqIO
 from Bio.Seq import Seq
-from Bio.SeqIO import FastaIO
 from Bio.SeqRecord import SeqRecord
 import numpy as np
 import sys
 from sklearn import cross_validation
-from load_ncbi import run, load_seqs_from_ncbi, get_rec, check_hash
+from load_ncbi import run, load_seqs_from_ncbi, get_rec
 import matplotlib.pyplot as plt
 import pylab as P
 
@@ -20,7 +19,19 @@ import pylab as P
 def one_hot(x, n):
     """
     Get true classes (Y) and number of classes and return Y matrix in binary representation.
-    :param x: true classes (Y)
+    From vector x, we get matrix of sizes [x.length, n].
+        Example: We have 5 different classes (0, 1, 2, 3, 4) and vector x = [0, 0, 1, 2, 2, 3, 4].
+                 From that we would get matrix of sizes [7, 5] and the matrix would look like:
+
+                        [1, 0, 0, 0, 0],
+                        [1, 0, 0, 0, 0],
+                        [0, 1, 0, 0, 0],
+                        [0, 0, 1, 0, 0],
+                        [0, 0, 1, 0, 0],
+                        [0, 0, 0, 1, 0],
+                        [0, 0, 0, 0, 1]
+
+    :param x: vector true classes (Y)
     :param n: number of classes
     :return: Y matrix in binary representation
     """
@@ -38,6 +49,23 @@ def seq_to_bits(vec, unique_nucleotides=None, transmission_dict=None):
     :param vec: sequence to transform
     :param unique_nucleotides: number of unique nucleotides in loaded files - mandatory if transmission_dict is None
     :param transmission_dict: transmission dictionary - if None, build it here (every nucleotide represents one bit)
+                                     e.g. if our unique nucleotides are "ATCGYM", then corresponding dictionary will be
+                                          {"A": [1, 0, 0, 0, 0, 0]
+                                           "T": [0, 1, 0, 0, 0, 0]
+                                           "C": [0, 0, 1, 0, 0, 0]
+                                           "G": [0, 0, 0, 1, 0, 0]
+                                           "Y": [0, 0, 0, 0, 1, 0]
+                                           "M": [0, 0, 0, 0, 0, 1]}
+
+                              otherwise set rules beforehand and put it in dictionary;
+                              e.g. if you want your prediction to be based on "ATCG" nucleotides and every other
+                              nucleotide won't have much influence, then create:
+                                      {"A": [1, 0, 0, 0],
+                                       "T": [0, 1, 0, 0],
+                                       "C": [0, 0, 1, 0],
+                                       "G": [0, 0, 0, 1]}
+                              with such dictionary you would set up rules for "ATCG" and every other nucleotide
+                              will get value [1, 1, 1, 1] so it won't have much influence on prediction.
     :return: number representation of vec
     """
 
@@ -140,12 +168,31 @@ def load_from_file_fasta(filename, depth=4):
 
 
 def load_data(filename, test=0.2, transmission_dict=None, depth=4, sample=0.2, read_size=100, onehot=True, seed=random.randint(0, sys.maxint)):
-
+    """
+    Main function for loading data. We expect, that fasta files with data are in media directory - if the file with
+    given filename does not exist, we build a new one from NCBI database.
+    Then we build numeric taxonomy representation.
+    With sklearn function LabelShuffleSplit we split whole dataset into train and test set. When built, test and train
+    datasets are saved for later use.
+    We want to evaluate our model with train data, so we split train data into two parts (with LabelShuffleSplit function).
+    Given params set some rules for building.
+    :param filename: dataset filename (which MUST be in media directory, otherwise new will be built)
+    :param test: test size in percentage of whole dataset
+    :param transmission_dict: dictionary for transforming nucleotides to bits (seq_to_bits function)
+    :param depth: taxonomy tree depth
+    :param sample: sampling size - 20% means that every fifth read is included into dataset
+    :param read_size: chunk size
+    :param onehot: binary representation of true classes
+    :param seed: random seed for replicating experiments
+    :return: train and test datasets as numpy arrays
+    """
     assert test < 1.0 and sample < 1.0
     dir = "media/"
 
+    # load data from fasta file
     data, labels = load_from_file_fasta(dir + filename, depth=depth)
 
+    # taxonomy annotations to numeric representation (from 0 to num_of_classes)
     temp_l = []
     label_num = -1
     tax = {}
@@ -169,6 +216,7 @@ def load_data(filename, test=0.2, transmission_dict=None, depth=4, sample=0.2, r
     for train_index, test_index in ss:
         # we split ids to train and test
         tr_ids = list(oids[i] for i in train_index)
+        # TODO - split tr_ids into 2 sets - trtr and trte
         te_ids = list(oids[i] for i in test_index)
 
         # intersection of train and test must be empty set
@@ -195,6 +243,10 @@ def load_data(filename, test=0.2, transmission_dict=None, depth=4, sample=0.2, r
                 teY.append(tax[te_id])
                 # don't use whole sequence, only every second, third etc (depending on sample percent) - use ceil to avoid decimals
                 seq = seq[int(math.ceil(read_size / sample)):]
+
+        # TODO - add trtr and trte code
+
+        # TODO - add saving of train and test data (only trtr, not trte - this is for evaluating model before saving)
 
     if onehot:
         trY = one_hot(trY, number_of_classes)
