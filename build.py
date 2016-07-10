@@ -42,7 +42,7 @@ def softmax(X):
 
 def dropout(X, p=0.):
     """
-    Way of injecting noise into our network - help us with overfitting.
+    Way of injecting noise into our network - help us with overfitting and local extrema.
     Randomly drop values and scale rest.
     """
     if p > 0:
@@ -99,19 +99,29 @@ def model(X, w, w2, w3, w4, p_drop_conv, p_drop_hidden, w_o):
     return l1, l2, l3, l4, pyx
 
 def save_model(filename, model):
+    """
+    Get name of the file where you want to save the model.
+    :param filename: name of the file - must include directory, otherwise it will be saved in current directory
+    :param model: model to be saved
+    :return: None
+    """
     print "saving model..."
     f = open(filename, 'wb')
     cPickle.dump(model, f, protocol=cPickle.HIGHEST_PROTOCOL)
     f.close()
     print "model saved..."
 
-def load_model(filename):
-    f = open(filename, 'rb')
-    loaded_obj = cPickle.load(f)
-    f.close()
-    return loaded_obj
-
-def load_dataset():
+def load_dataset(filename):
+    """
+    Function for loading dataset before initializing neural network and evaluating the model.
+    If you get/build dataset in fasta format beforehand, provide filename in argument when calling build.py. We expect
+    provided filename is located in media directory.
+    If filename is empty/not provided, then specify all the needed params for expected data loading. Filename is build from
+    md5 from sorted genome IDs, depth param, sample param, read_size param, onehot param and seed param. File is saved
+    in fasta format and zipped with gzip.
+    :param filename: filename, given from
+    :return: train and test datasets as well as number of classes
+    """
     transmission_dict = {'A': [1, 0, 0, 0], 'T': [0, 1, 0, 0], 'C': [0, 0, 1, 0], 'G': [0, 0, 0, 1]}
     test = 0.2
     depth = 4
@@ -119,14 +129,20 @@ def load_dataset():
     read_size = 100
     onehot = True
     seed = 0
-    filename = "%s_%d_%.3f_%d_%d_%d%s" % (hashlib.md5(str(sorted(get_gids()))).hexdigest(), depth, sample, read_size, onehot, seed, ".fasta.gz")
+    if not filename:
+        filename = "%s_%d_%.3f_%d_%d_%d%s" % (hashlib.md5(str(sorted(get_gids()))).hexdigest(), depth, sample, read_size, onehot, seed, ".fasta.gz")
     trX, teX, trY, teY, num_of_classes = load_data(filename=filename, test=test, depth=depth, read_size=read_size, transmission_dict=transmission_dict, sample=sample, seed=seed)
-    #X, Y, num_of_classes = ...
-    #cross validation oz kakrsnokoli razporejanje (npr 80-20)
-    #trX, teX, trY, teY = ...
     return trX, teX, trY, teY, num_of_classes
 
 def init_net(num_of_classes, input_len):
+    """
+    Major initialize of the neural net is in this method. You can adjust convolutional window size for each layer,
+    number of filters for each layer and all the cascade parameters for every layer. We also initialize and define weights
+    for neural net.
+    :param num_of_classes: number of classes
+    :param input_len: read (sequence chunk) length
+    :return: weights in param variable, X and Y matrices, cost function, update function and maxima prediction
+    """
     cwin1=4*6  # multiples of 4 because of data representation
     cwin2=3
     cwin3=2
@@ -193,14 +209,19 @@ def init_net(num_of_classes, input_len):
     return params, X, Y, cost, updates, y_x
 
 print "start:", time.strftime('%X %x %Z')
+start = time.gmtime(0)
 
-trX, teX, trY, teY, num_of_classes = load_dataset()
+# TODO - parse filename argument
+filename = ""
+
+trX, teX, trY, teY, num_of_classes = load_dataset(filename)
 
 print(trX.shape)
 input_len = trX.shape[1] # save input length for further use
 trX = trX.reshape(-1, 1, 1, input_len)
 teX = teX.reshape(-1, 1, 1, input_len)
 
+# params for model and cascade initialization
 conv1_stride=4
 stride1=2
 downscale1=3
@@ -211,19 +232,20 @@ downscale3=1
 
 params, X, Y, cost, updates, y_x = init_net(num_of_classes, input_len)
 
-train = theano.function(inputs=[X, Y], outputs=cost, updates=updates, allow_input_downcast=True) # compile train function
-predict = theano.function(inputs=[X], outputs=y_x, allow_input_downcast=True) # compile predict function
+# compile train and predict function
+train = theano.function(inputs=[X, Y], outputs=cost, updates=updates, allow_input_downcast=True)
+predict = theano.function(inputs=[X], outputs=y_x, allow_input_downcast=True)
 
 # TODO testing - ne evaluiraj modela na testnih podatkih, ampak razdeli ucno mnozico na 2 dela
-epsilon = 0.005  # ce se score ne zveca v 5 poskusih vsaj za 0,5%, potem nehamo
+epsilon = 0.005  # if evaluation score does not improve for 0,5% every 5 tries, then stop evaluating - we get best model
 best_score = -1
-count_best = 5
-iter = 10
+count_best = 10
+iter = 100
 for i in range(iter):
     for start, end in zip(range(0, len(trX), 128), range(128, len(trX), 128)):
         cost = train(trX[start:end], trY[start:end])
-    curr_score = np.mean(np.argmax(teY, axis=1) == predict(teX))
-    print curr_score
+    curr_score = (np.mean(np.argmax(teY, axis=1) == predict(teX)))
+    print "%.5f" % curr_score
     if count_best == 0:
         break
     elif curr_score > (best_score + epsilon):
@@ -232,6 +254,8 @@ for i in range(iter):
     else:
         count_best -= 1
 
-save_model("models/params.pkl", params)
+# save best model to models directory
+save_model("models/best_params-%d.pkl" % int(time.time()), params)
 
 print "stop:", time.strftime('%X %x %Z')
+print "elapsed: ", (time.gmtime(0) - start)
