@@ -1,3 +1,4 @@
+import argparse
 import hashlib
 import random
 import time
@@ -108,13 +109,12 @@ def save_model(filename, model):
     :param model: model to be saved
     :return: None
     """
-    print "saving model..."
     f = open(filename, 'wb')
     cPickle.dump(model, f, protocol=cPickle.HIGHEST_PROTOCOL)
     f.close()
-    print "model saved..."
+    print "Model saved as: " + filename
 
-def load_dataset(filename, debug=False):
+def load_datasets_from_file(filename, debug=False):
     """
     Function for loading dataset before initializing neural network and evaluating the model.
     If you get/build dataset in fasta format beforehand, provide filename in argument when calling build.py. We expect
@@ -224,9 +224,19 @@ print "start:", time.strftime('%X %x %Z')
 start = time.gmtime(0)
 
 # TODO - parse filename argument
-filename = ""
+# arguments - filename, debug, input length
+parser = argparse.ArgumentParser()
+parser.add_argument("-f", "--filename", help="Provide filename for dataset you want to use. "
+                                             "It MUST be in 'media/' folder in current directory. If None is given then dataset"
+                                             "is built from NCBI database.", type=str, default="")
+parser.add_argument("-d", "--debug", action="store_true", help="If you want the enable debug mode, call program with this flag.", default=False)
+# parser.add_argument("-l", "--length", help="Input length - how big chunks you want to be sequences sliced to.", default=100, type=int)
+results = parser.parse_args()
+filename = results.filename
+debug = results.debug
+#input_len = results.length
 
-trX, teX, trY, teY, trteX, trteY, num_of_classes = load_dataset(filename, debug=True)
+trX, teX, trY, teY, trteX, trteY, num_of_classes = load_datasets_from_file(filename, debug=True)
 
 print(trX.shape)
 input_len = trX.shape[1] # save input length for further use
@@ -234,6 +244,7 @@ trX = trX.reshape(-1, 1, 1, input_len)
 teX = teX.reshape(-1, 1, 1, input_len)
 
 # params for model and cascade initialization
+#### IF YOU CHANGE THESE PARAMETERS, YOU MUST CHANGE IT IN PREDICT.PY TOO! ####
 conv1_stride=4
 stride1=2
 downscale1=3
@@ -241,6 +252,7 @@ stride2=2
 downscale2=2
 stride3=2
 downscale3=1
+#### IF YOU CHANGE ABOVE PARAMETERS, YOU MUST CHANGE IT IN PREDICT.PY TOO! ####
 
 params, X, Y, cost, updates, y_x = init_net(num_of_classes, input_len)
 
