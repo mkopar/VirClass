@@ -4,7 +4,6 @@ import cPickle
 __author__ = 'Matej'
 
 import os
-import pickle
 from Bio import Entrez
 from Bio import SeqIO
 from collections import defaultdict
@@ -20,17 +19,17 @@ if not os.path.isdir(dir):
 ##############   NCBI RECORD OPERATIONS   ##############
 
 def get_gids(term="Viruses[Organism] AND srcdb_refseq[PROP] AND complete_genome"):
+    """
+    Get genome IDs for given search term.
+    :param term: search term for NCBI query
+    :return: list of genome IDs for given term
+    """
     #term = "Viruses[Organism] AND srcdb_refseq[PROP] AND complete_genome"
     handle = Entrez.esearch(db="nucleotide", term=term, retmax=100000)
     record = Entrez.read(handle)
     id_list = sorted(set(record["IdList"]))
     print(record["Count"], len(record["IdList"]), len(id_list))
     return id_list
-
-
-def check_hash():
-    filenames = [s.split(".")[0] for s in os.listdir(dir)]
-    return hash(str(filenames)) == hash(str(get_gids()))
 
 
 def get_rec(rec_ID):
@@ -76,6 +75,11 @@ def get_gene(rec):
 
 
 def load_oid_seq_classification(ids):
+    """
+    Build dictionary of sequences and taxonomies for every genome ID.
+    :param ids: genome IDs
+    :return: sequences and taxonomy annotations dictionaries for every genome ID
+    """
     seq = {}
     tax = {}
     for oid in ids:
