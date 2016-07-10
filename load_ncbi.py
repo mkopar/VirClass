@@ -195,7 +195,7 @@ def get_taxonomy(id_list, count=-1):
     """
 
     taxonomy = rec_dd()
-    temp_count = 0
+    temp_count = 1
     for genome_id in id_list:
         try:
             rec = get_rec(genome_id)
