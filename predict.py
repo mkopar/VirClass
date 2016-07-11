@@ -9,6 +9,7 @@ import numpy as np
 
 __author__ = 'Matej'
 
+
 def load_model(filename):
     """
     Load the model from file and return the model. We expect here directory to be provided in filename, otherwise
@@ -29,12 +30,14 @@ def load_model(filename):
 parser = argparse.ArgumentParser()
 parser.add_argument("teX", help="Provide filename for test dataset you want to use (reads). It should have been in 'media/'"
                                 "directory and filename should end with '-teX.fasta.gz'", type=str)
-parser.add_argument("teX", help="Provide filename for test dataset you want to use (classes). It should have been in 'media/'"
+parser.add_argument("teY", help="Provide filename for test dataset you want to use (classes). It should have been in 'media/'"
                                 "directory and filename should end with '-teY.fasta.gz'", type=str)
-# parser.add_argument("-l", "--length", help="Input length - how big chunks you want to be sequences sliced to.", default=100, type=int)
+parser.add_argument("best_model", help="Provide filename for the best model. Filename must include directory. Must be of"
+                                       "format 'best_model-[timestamp].pkl'.", type=str)
 results = parser.parse_args()
 teX = load_dataset(results.teX)
 teY = load_dataset(results.teY)
+best_model = results.best_model
 
 # initialize matrices
 X = T.ftensor4()
@@ -50,12 +53,10 @@ stride3=2
 downscale3=1
 #### THIS SETTINGS MUST BE SAME AS IN BUILD.PY FILE ####
 
-# TODO add parsing filename of the best model
-
 # models filename is now of format best_params-[timestamp].pkl
-params = load_model("models/params.pkl")
+params = load_model(best_model)
 l1, l2, l3, l4, py_x = model(X=X, w=params[0], w2=params[1], w3=params[2], w4=params[3], p_drop_conv=0., p_drop_hidden=0., w_o=params[4])
-y_x = T.argmax(py_x, axis=1) # maxima predictions
+#y_x = T.argmax(py_x, axis=1) # maxima predictions
 y_x = py_x
 
 # compile only predict function
