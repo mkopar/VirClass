@@ -360,7 +360,7 @@ def load_seqs_from_ncbi(seq_len=100, skip_read=0, overlap=50, taxonomy_el_count=
         for oid, seq in seqs.iteritems():
             while seq:
                 if len(seq) < seq_len:
-                    # krajsih od 100 nocemo
+                    # we don't want shorter sequences than seq_len (shorter than 100)
                     break
                 reads[oid].append(seq[:seq_len])
                 seq = seq[seq_len - overlap + ((seq_len - overlap) * skip_read):]
