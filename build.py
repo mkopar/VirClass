@@ -143,10 +143,11 @@ def load_datasets_from_file(filename, debug=False, read_size=100):
     if not filename:
         filename = "%s_%d_%.3f_%d_%d_%d_%d%s" % (hashlib.md5(str(sorted(get_gids()))).hexdigest(), depth, sample, read_size, onehot,
                                                  seed, taxonomy_el_count, ".fasta.gz")
-    trX, teX, trY, teY, trteX, trteY, num_of_classes = load_data(filename=filename, test=test, depth=depth,
-                                                                 read_size=read_size, transmission_dict=transmission_dict,
-                                                                 sample=sample, seed=seed, taxonomy_el_count=taxonomy_el_count)
-    return trX, teX, trY, teY, trteX, trteY, num_of_classes
+    trX, teX, trY, teY, trteX, trteY, \
+    num_of_classes, train_class_sizes = load_data(filename=filename, test=test, depth=depth, read_size=read_size,
+                                                  transmission_dict=transmission_dict, sample=sample, seed=seed,
+                                                  taxonomy_el_count=taxonomy_el_count)
+    return trX, teX, trY, teY, trteX, trteY, num_of_classes, train_class_sizes
 
 def init_net(num_of_classes, input_len):
     """
@@ -238,7 +239,7 @@ filename = results.filename
 debug = results.debug
 input_len = results.length
 
-trX, teX, trY, teY, trteX, trteY, num_of_classes = load_datasets_from_file(filename, debug=True, read_size=input_len)
+trX, teX, trY, teY, trteX, trteY, num_of_classes, train_class_sizes = load_datasets_from_file(filename, debug=True, read_size=input_len)
 
 print(trX.shape)
 assert input_len == trX.shape[1]
@@ -246,14 +247,15 @@ trX = trX.reshape(-1, 1, 1, input_len)
 teX = teX.reshape(-1, 1, 1, input_len)
 
 # params for model and cascade initialization
+#### DO NOT CHANGE IF YOU DON'T KNOW WHAT YOU'RE DOING!!! ####
 #### IF YOU CHANGE THESE PARAMETERS, YOU MUST CHANGE IT IN PREDICT.PY TOO! ####
-conv1_stride=4
-stride1=2
-downscale1=3
-stride2=2
-downscale2=2
-stride3=2
-downscale3=1
+conv1_stride = 4
+stride1 = 2
+downscale1 = 3
+stride2 = 2
+downscale2 = 2
+stride3 = 2
+downscale3 = 1
 #### IF YOU CHANGE ABOVE PARAMETERS, YOU MUST CHANGE IT IN PREDICT.PY TOO! ####
 
 params, X, Y, cost, updates, y_x = init_net(num_of_classes, input_len)
@@ -280,8 +282,11 @@ for i in range(iter):
     else:
         count_best -= 1
 
-# save best model to models directory
-save_model("models/best_params-%d.pkl" % int(time.time()), params)
+# save best model to models directory; add also parameters for net initialization and train class sizes
+conv_params = (conv1_stride, stride1, downscale1, stride2, downscale2, stride3, downscale3)
+params.append(train_class_sizes)
+params.append(conv_params)
+save_model("models/best_model_with_params-%d.pkl" % int(time.time()), params)
 
 print "stop:", time.strftime('%X %x %Z')
 print "elapsed: ", (time.gmtime(0) - start)
