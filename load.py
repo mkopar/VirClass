@@ -169,6 +169,16 @@ def load_from_file_fasta(filename, depth=4, taxonomy_el_count=-1):
 
 
 def dataset_from_id(data, tax, ids, read_size, sample, transmission_dict):
+    """
+    Build dataset from given IDs list and other params.
+    :param data: whole dataset dictionary
+    :param tax: whole taxonomy dictionary
+    :param ids: IDs for building dataset of them
+    :param read_size: size of reads you want to generate
+    :param sample: how many data you want to skip - 20% means that every fifth read will be included
+    :param transmission_dict: dictionary of transmission
+    :return: build dataset with numeric sequences and classes
+    """
     tempX = []
     tempY = []
     for te_id in ids:
@@ -184,11 +194,22 @@ def dataset_from_id(data, tax, ids, read_size, sample, transmission_dict):
 
 
 def load_dataset(filename):
+    """
+    Return object from filename. Filename must include directory.
+    :param filename: dir + filename
+    :return: object
+    """
     with gzip.open(filename, "rb") as f:
         return pickle.load(f)
 
 
 def save_dataset(filename, obj):
+    """
+    Save dataset to given filename. Filename must include directory.
+    :param filename: dir + filename
+    :param obj: object you want to save
+    :return: None
+    """
     with gzip.open(filename, "wb") as f:
         pickle.dump(obj, f)
     print "Successfully saved as: " + filename
@@ -224,8 +245,23 @@ def load_data(filename, test=0.2, transmission_dict=None, depth=4, sample=0.2, r
     # load data from fasta file - we need it here because of num_of_classes - we only can get this from labels/data dict
     data, labels = load_from_file_fasta(dir + filename, depth=depth, taxonomy_el_count=taxonomy_el_count)
 
+    # numeric representation of classes and calculating sum of sequence lengths for each class
+    temp_l = []
+    label_num = -1
+    tax = {}
+    class_size = defaultdict(int)
+    for id, l in labels.iteritems():
+        if l not in temp_l:
+            temp_l.append(l)
+            label_num += 1
+        tax[id] = label_num
+        print label_num, len(data[id])
+        class_size[label_num] += len(data[id])
+
+    for _class, sum in class_size.iteritems():
+        class_size[_class] = sum / tax.values().count(_class)
+
     try:
-        raise IOError
         # we save files as something.fasta.gz, so we try to open those files - if they don't exist, generate new ones
         trX = load_dataset(dir + filename[:filename.index(".fasta.gz")] + "-trX.fasta.gz")
         trY = load_dataset(dir + filename[:filename.index(".fasta.gz")] + "-trY.fasta.gz")
@@ -237,14 +273,14 @@ def load_data(filename, test=0.2, transmission_dict=None, depth=4, sample=0.2, r
         # data, labels = load_from_file_fasta(dir + filename, depth=depth, taxonomy_el_count=taxonomy_el_count)
 
         # taxonomy annotations to numeric representation (from 0 to num_of_classes)
-        temp_l = []
-        label_num = -1
-        tax = {}
-        for id, l in labels.iteritems():
-            if l not in temp_l:
-                temp_l.append(l)
-                label_num += 1
-            tax[id] = label_num
+        # temp_l = []
+        # label_num = -1
+        # tax = {}
+        # for id, l in labels.iteritems():
+        #     if l not in temp_l:
+        #         temp_l.append(l)
+        #         label_num += 1
+        #     tax[id] = label_num
 
         trX = []
         trY = []
