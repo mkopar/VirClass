@@ -114,7 +114,7 @@ def save_model(filename, model):
     f.close()
     print "Model saved as: " + filename
 
-def load_datasets_from_file(filename, debug=False):
+def load_datasets_from_file(filename, debug=False, read_size=100):
     """
     Function for loading dataset before initializing neural network and evaluating the model.
     If you get/build dataset in fasta format beforehand, provide filename in argument when calling build.py. We expect
@@ -123,13 +123,15 @@ def load_datasets_from_file(filename, debug=False):
     md5 from sorted genome IDs, depth param, sample param, read_size param, onehot param and seed param. File is saved
     in fasta format and zipped with gzip.
     :param filename: filename, given from
+    :param debug: if the flag for debug is present, run in debug mode (controlled seed, smaller taxonomy)
+    :param read_size: input length
     :return: train and test datasets as well as number of classes
     """
     transmission_dict = {'A': [1, 0, 0, 0], 'T': [0, 1, 0, 0], 'C': [0, 0, 1, 0], 'G': [0, 0, 0, 1]}
     test = 0.2
     depth = 4
     sample = 0.2
-    read_size = 100
+    #read_size = 100
     onehot = True
     # taxonomy_el_count = 20 and seed = 0 for debug only
     if debug:
@@ -230,16 +232,16 @@ parser.add_argument("-f", "--filename", help="Provide filename for dataset you w
                                              "It MUST be in 'media/' folder in current directory. If None is given then dataset"
                                              "is built from NCBI database.", type=str, default="")
 parser.add_argument("-d", "--debug", action="store_true", help="If you want the enable debug mode, call program with this flag.", default=False)
-# parser.add_argument("-l", "--length", help="Input length - how big chunks you want to be sequences sliced to.", default=100, type=int)
+parser.add_argument("-l", "--length", help="Input length - how big chunks you want to be sequences sliced to.", default=100, type=int)
 results = parser.parse_args()
 filename = results.filename
 debug = results.debug
-#input_len = results.length
+input_len = results.length
 
-trX, teX, trY, teY, trteX, trteY, num_of_classes = load_datasets_from_file(filename, debug=True)
+trX, teX, trY, teY, trteX, trteY, num_of_classes = load_datasets_from_file(filename, debug=True, read_size=input_len)
 
 print(trX.shape)
-input_len = trX.shape[1] # save input length for further use
+assert input_len == trX.shape[1]
 trX = trX.reshape(-1, 1, 1, input_len)
 teX = teX.reshape(-1, 1, 1, input_len)
 
