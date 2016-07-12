@@ -126,13 +126,13 @@ and (naive) score for the best model.
 
 `predict.py`:
 - `prediction data file [MANDATORY]`
-- `class labels file [OPTIONAL]`
 - `model filename [MANDATORY]`
 
 In order for `predict.py` to work, user must provide prediction data file and model filename he wants to use.
-Class labels file is optional because it is only possible to use it when we perform controlled experiments with
-prebuild prediction dataset and not with real data. Output of this file is table that shows the presence of
-final class labels for every read.
+Prediction data file must be in numeric representation. It must contain some reads (small sequence chunks) which
+are translated into numbers.
+Output of this file is table that shows the presence of final class labels for whole sample (file) - so it shows
+which viruses are detected in the reads.
 
 Both main scripts have help if you find troubles with running them.
 
