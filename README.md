@@ -111,8 +111,8 @@ All code is written in Python 2.7.2. We used libraries such as numpy, BioPython 
 The main scripts are `build.py` and `predict.py`.
 
 `build.py`:
-    `learning data file [OPTIONAL]`
-    `sliding window size [OPTIONAL]`
+    * `learning data file [OPTIONAL]`
+    * `sliding window size [OPTIONAL]`
 
 If you provide file with learning data and corresponding class labels, than this file will be used for learning model.
 File must be in 'media/' directory. If you do not provide file with learning data, new dataset will be generated.
@@ -125,9 +125,9 @@ Outputs of this file are best model, saved in specific file in 'models/' directo
 and (naive) score for the best model.
 
 `predict.py`:
-    `prediction data file [MANDATORY]`
-    `class labels file [OPTIONAL]`
-    `model filename [MANDATORY]`
+    * `prediction data file [MANDATORY]`
+    * `class labels file [OPTIONAL]`
+    * `model filename [MANDATORY]`
 
 In order for `predict.py` to work, user must provide prediction data file and model filename he wants to use.
 Class labels file is optional because it is only possible to use it when we perform controlled experiments with
