@@ -157,7 +157,7 @@ def load_datasets_from_file(filename, debug=False, read_size=100):
                                                   taxonomy_el_count=taxonomy_el_count)
     return trX, teX, trY, teY, trteX, trteY, num_of_classes, train_class_sizes
 
-def init_net(num_of_classes, input_len):
+def init_net(num_of_classes, input_len, conv_params):
     """
     Major initialize of the neural net is in this method. You can adjust convolutional window size for each layer,
     number of filters for each layer and all the cascade parameters for every layer. We also initialize and define weights
@@ -221,8 +221,8 @@ def init_net(num_of_classes, input_len):
     X = T.ftensor4()
     Y = T.fmatrix()
 
-    noise_l1, noise_l2, noise_l3, noise_l4, noise_py_x = model(X, w, w2, w3, w4, 0.2, 0.5, w_o)
-    l1, l2, l3, l4, py_x = model(X, w, w2, w3, w4, 0., 0., w_o)
+    noise_l1, noise_l2, noise_l3, noise_l4, noise_py_x = model(X, w, w2, w3, w4, 0.2, 0.5, w_o, conv_params)
+    l1, l2, l3, l4, py_x = model(X, w, w2, w3, w4, 0., 0., w_o, conv_params)
     y_x = T.argmax(py_x, axis=1)  # maxima predictions
 
     cost = T.mean(T.nnet.categorical_crossentropy(noise_py_x, Y)) # classification matrix to optimize - maximize the value that is actually there and minimize the others
@@ -263,8 +263,9 @@ if __name__ == "__main__":
     downscale2 = 2
     stride3 = 2
     downscale3 = 1
+    conv_params = (conv1_stride, stride1, downscale1, stride2, downscale2, stride3, downscale3)
 
-    params, X, Y, cost, updates, y_x = init_net(num_of_classes, input_len)
+    params, X, Y, cost, updates, y_x = init_net(num_of_classes, input_len, conv_params)
 
     # compile train and predict function
     train = theano.function(inputs=[X, Y], outputs=cost, updates=updates, allow_input_downcast=True)
@@ -289,7 +290,6 @@ if __name__ == "__main__":
             count_best -= 1
 
     # save best model to models directory; add also parameters for net initialization and train class sizes
-    conv_params = (conv1_stride, stride1, downscale1, stride2, downscale2, stride3, downscale3)
     params.append(train_class_sizes)
     params.append(conv_params)
     save_model("models/best_model_with_params-%d.pkl" % int(time.time()), params)
