@@ -353,8 +353,7 @@ def load_data(filename, test=0.2, transmission_dict=None, depth=4, sample=0.2, r
             save_dataset(dir + filename[:filename.index(".fasta.gz")] + "-trteX.fasta.gz", trteX)
             save_dataset(dir + filename[:filename.index(".fasta.gz")] + "-trteY.fasta.gz", trteY)
 
-    assert data.keys() == labels.keys()
-    number_of_classes = len(data.keys())
+    number_of_classes = len(class_size.keys())
 
     if onehot:
         trY = one_hot(trY, number_of_classes)
