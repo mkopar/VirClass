@@ -26,7 +26,7 @@ def load_model(filename):
     else:
         with f:
             loaded_obj = cPickle.load(f)
-    return np.asarray(loaded_obj)
+    return loaded_obj
 
 parser2 = argparse.ArgumentParser()
 parser2.add_argument("teX", help="Provide filename for test dataset you want to use (reads). It should have been in 'media/'"
@@ -36,9 +36,18 @@ parser2.add_argument("best_model", help="Provide filename for the best model. Fi
 parser2.add_argument("-teY", help="Provide filename for test dataset you want to use (classes). It should have been in 'media/'"
                                   "directory and filename should end with '-teY.fasta.gz'", type=str)
 results = parser2.parse_args()
-teX = load_dataset(results.teX)
-teY = load_dataset(results.teY)
+teX = np.asarray(load_dataset(results.teX))
+teX = teX.reshape(-1, 1, 1, teX.shape[1])
+teY = np.asarray(load_dataset(results.teY))
 best_model = results.best_model
+
+# teX_filename = "media/2114bef791b6111f12575439a7bbed73_4_0.200_100_1_0_20-teX.fasta.gz"
+# teY_filename = "media/2114bef791b6111f12575439a7bbed73_4_0.200_100_1_0_20-teY.fasta.gz"
+# model_filename = "models/best_model_with_params-1468304923-improving-eval.pkl"
+# teX = np.asarray(load_dataset(teX_filename))
+# teX = teX.reshape(-1, 1, 1, teX.shape[1])
+# teY = np.asarray(load_dataset(teY_filename))
+# best_model = model_filename
 
 # initialize matrices
 X = T.ftensor4()
@@ -74,8 +83,6 @@ predict = theano.function(inputs=[X], outputs=y_x, allow_input_downcast=True)
 
 # load class sizes
 class_sizes = params[5]
-
-teX = teX.reshape(-1, 1, 1, teX.shape[1])
 
 final_results = predict(teX)
 sum_results = np.sum(final_results, axis=0)
