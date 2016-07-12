@@ -113,15 +113,16 @@ The main scripts are `build.py` and `predict.py`.
 `build.py`:
 - `learning data file [OPTIONAL]`
 - `sliding window size [OPTIONAL]`
+- `debug mode flag [OPTIONAL]`
 
 If you provide file with learning data and corresponding class labels, than this file will be used for learning model.
-File must be in 'media/' directory. If you do not provide file with learning data, new dataset will be generated.
+File must be in `media/` directory. If you do not provide file with learning data, new dataset will be generated.
 
 If you do provide length of read window size, then this window size is used when slicing sequences. Otherwise
 default value is used (100).
 If we need to generate new datasets, then files `load.py` and `load_ncbi.py` are called
 for proper building of the dataset.
-Outputs of this file are best model, saved in specific file in 'models/' directory
+Outputs of this file are best model, saved in specific file in `models/` directory
 and (naive) score for the best model.
 
 `predict.py`:
@@ -134,9 +135,47 @@ are translated into numbers.
 Output of this file is table that shows the presence of final class labels for whole sample (file) - so it shows
 which viruses are detected in the reads.
 
+If you run `build.py` it will generate a few files into `media/` directory and into `models/`.
+Log in console will print filenames.
+
+`THEANO_FLAGS=mode=FAST_RUN,device=gpu,floatX=float32 python2 build.py -d`
+
+`...`
+
+`Successfully saved as: media/2114bef791b6111f12575439a7bbed73_4_0.200_100_1_0_20-trX.fasta.gz`
+
+`Successfully saved as: media/2114bef791b6111f12575439a7bbed73_4_0.200_100_1_0_20-trY.fasta.gz`
+
+`Successfully saved as: media/2114bef791b6111f12575439a7bbed73_4_0.200_100_1_0_20-teX.fasta.gz`
+
+`Successfully saved as: media/2114bef791b6111f12575439a7bbed73_4_0.200_100_1_0_20-teY.fasta.gz`
+
+`Successfully saved as: media/2114bef791b6111f12575439a7bbed73_4_0.200_100_1_0_20-trteX.fasta.gz`
+
+`Successfully saved as: media/2114bef791b6111f12575439a7bbed73_4_0.200_100_1_0_20-trteY.fasta.gz`
+
+`...`
+
+`Model saved as: models/best_model_with_params-1468314846.pkl`
+
+After that, you should run `predict.py`:
+
+`THEANO_FLAGS=mode=FAST_RUN,device=gpu,floatX=float32 python2 -u predict.py media/2114bef791b6111f12575439a7bbed73_4_0.200_100_1_0_20-teX.fasta.gz models/best_model_with_params-1468314846.pkl -teY media/2114bef791b6111f12575439a7bbed73_4_0.200_100_1_0_20-teY.fasta.gz`
+
+`raw predicted values:`
+`[  28.16671371  28.16671371  28.16671753  28.16673088  28.16672516 28.16678047  28.16675758  28.16679573  28.16674423  28.16673279  28.16673279  28.16672707]`
+
+`weighted and normed predicted values: `
+`[0.0014856645242153916, 0.005405241549529766, 0.0037420908103224224, 0.00501187382219525, 0.00026656122686071723, 0.003804265325743079, 0.00022706154490256402, 0.0030329272887467235, 0.005466086596580193, 0.00042061244195690256, 0.000622758247763292, 0.002846273955743739]`
+
+`sorted probabilities:  `
+`[(8, 0.16906424299368172), (1, 0.16718232589673507), (3, 0.1550155927385808), (5, 0.11766466302349769), (2, 0.11574162591141302), (7, 0.09380743372189672), (11, 0.08803430812484887), (0, 0.04595111030370201), (10, 0.01926170576807985), (9, 0.013009403132701425), (4, 0.008244650214445804), (6, 0.007022938170417014)]`
+
+`expected classes:  [ 0  9 11]`
+
 Both main scripts have help if you find troubles with running them.
 
-It is best if user can provide that directories 'media', 'cache' and 'models'
+It is best if user can provide that directories `media/`, `cache/` and `models/`
 are present and have the right permissions.
 Folder 'cache' stores records from NCBI website to avoid downloading it every time we want to run the tool.
 Folder 'media' stores datasets for train and test and other data.
