@@ -237,18 +237,16 @@ parser.add_argument("-l", "--length", help="Input length - how big chunks you wa
 results = parser.parse_args()
 filename = results.filename
 debug = results.debug
-input_len = results.length
+read_size = results.length
 
-trX, teX, trY, teY, trteX, trteY, num_of_classes, train_class_sizes = load_datasets_from_file(filename, debug=True, read_size=input_len)
+trX, teX, trY, teY, trteX, trteY, num_of_classes, train_class_sizes = load_datasets_from_file(filename, debug=True, read_size=read_size)
 
 print(trX.shape)
-assert input_len == trX.shape[1]
+input_len = trX.shape[1]
 trX = trX.reshape(-1, 1, 1, input_len)
 teX = teX.reshape(-1, 1, 1, input_len)
 
 # params for model and cascade initialization
-#### DO NOT CHANGE IF YOU DON'T KNOW WHAT YOU'RE DOING!!! ####
-#### IF YOU CHANGE THESE PARAMETERS, YOU MUST CHANGE IT IN PREDICT.PY TOO! ####
 conv1_stride = 4
 stride1 = 2
 downscale1 = 3
@@ -256,7 +254,6 @@ stride2 = 2
 downscale2 = 2
 stride3 = 2
 downscale3 = 1
-#### IF YOU CHANGE ABOVE PARAMETERS, YOU MUST CHANGE IT IN PREDICT.PY TOO! ####
 
 params, X, Y, cost, updates, y_x = init_net(num_of_classes, input_len)
 

@@ -48,8 +48,6 @@ Y = T.fmatrix()
 params = load_model(best_model)
 # params = [w, w2, w3, w4, w_o, train_class_sizes, conv_params]
 
-#### DO NOT CHANGE IF YOU DON'T KNOW WHAT YOU'RE DOING!!! ####
-#### THIS SETTINGS MUST BE SAME AS IN BUILD.PY FILE ####
 conv_params = params[6]
 # conv_params = (conv1_stride, stride1, downscale1, stride2, downscale2, stride3, downscale3)
 conv1_stride = 4
@@ -66,7 +64,6 @@ stride3 = 2
 assert stride3 == conv_params[5]
 downscale3 = 1
 assert downscale3 == conv_params[6]
-#### THIS SETTINGS MUST BE SAME AS IN BUILD.PY FILE ####
 
 l1, l2, l3, l4, py_x = model(X=X, w=params[0], w2=params[1], w3=params[2], w4=params[3], p_drop_conv=0., p_drop_hidden=0., w_o=params[4])
 #y_x = T.argmax(py_x, axis=1) # maxima predictions
