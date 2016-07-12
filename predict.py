@@ -28,14 +28,14 @@ def load_model(filename):
             loaded_obj = cPickle.load(f)
     return loaded_obj
 
-parser = argparse.ArgumentParser()
-parser.add_argument("teX", help="Provide filename for test dataset you want to use (reads). It should have been in 'media/'"
-                                "directory and filename should end with '-teX.fasta.gz'", type=str)
-parser.add_argument("-teY", help="Provide filename for test dataset you want to use (classes). It should have been in 'media/'"
-                                 "directory and filename should end with '-teY.fasta.gz'", type=str)
-parser.add_argument("best_model", help="Provide filename for the best model. Filename must include directory. Must be of"
-                                       "format 'best_model_with_params-[timestamp].pkl'.", type=str)
-results = parser.parse_args()
+parser2 = argparse.ArgumentParser()
+parser2.add_argument("teX", help="Provide filename for test dataset you want to use (reads). It should have been in 'media/'"
+                                 "directory and filename should end with '-teX.fasta.gz'", type=str)
+parser2.add_argument("-teY", help="Provide filename for test dataset you want to use (classes). It should have been in 'media/'"
+                                  "directory and filename should end with '-teY.fasta.gz'", type=str)
+parser2.add_argument("best_model", help="Provide filename for the best model. Filename must include directory. Must be of"
+                                        "format 'best_model_with_params-[timestamp].pkl'.", type=str)
+results = parser2.parse_args()
 teX = load_dataset(results.teX)
 teY = load_dataset(results.teY)
 best_model = results.best_model
