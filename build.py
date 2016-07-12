@@ -224,7 +224,7 @@ def init_net(num_of_classes, input_len):
     return params, X, Y, cost, updates, y_x
 
 print "start:", time.strftime('%X %x %Z')
-start = time.gmtime(0)
+start = int(time.gmtime(0))
 
 # TODO - parse filename argument
 # arguments - filename, debug, input length
@@ -287,4 +287,4 @@ params.append(conv_params)
 save_model("models/best_model_with_params-%d.pkl" % int(time.time()), params)
 
 print "stop:", time.strftime('%X %x %Z')
-print "elapsed: ", (time.gmtime(0) - start)
+#print "elapsed: ", (int(time.gmtime(0)) - start)
