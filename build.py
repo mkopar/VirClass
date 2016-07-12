@@ -245,6 +245,7 @@ print(trX.shape)
 input_len = trX.shape[1]
 trX = trX.reshape(-1, 1, 1, input_len)
 teX = teX.reshape(-1, 1, 1, input_len)
+trteX = trteX.reshape(-1, 1, 1, input_len)
 
 # params for model and cascade initialization
 conv1_stride = 4
