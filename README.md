@@ -173,7 +173,8 @@ After that, you should run `predict.py`:
 
 `expected classes:  [ 0  9 11]`
 
-Demo files for this example are in `demo/` folder in repository.
+Demo files for this example are in `demo/` folder in repository. You should therefore run only `predict.py` as I already
+pregenerated the files you need for prediction.
 
 Both main scripts have help if you find troubles with running them.
 
