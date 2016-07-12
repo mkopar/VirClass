@@ -139,14 +139,23 @@ If you run `build.py` it will generate a few files into `media/` directory and i
 Log in console will print filenames.
 
 `THEANO_FLAGS=mode=FAST_RUN,device=gpu,floatX=float32 python2 build.py -d`
+
 `...`
+
 `Successfully saved as: media/2114bef791b6111f12575439a7bbed73_4_0.200_100_1_0_20-trX.fasta.gz`
+
 `Successfully saved as: media/2114bef791b6111f12575439a7bbed73_4_0.200_100_1_0_20-trY.fasta.gz`
+
 `Successfully saved as: media/2114bef791b6111f12575439a7bbed73_4_0.200_100_1_0_20-teX.fasta.gz`
+
 `Successfully saved as: media/2114bef791b6111f12575439a7bbed73_4_0.200_100_1_0_20-teY.fasta.gz`
+
 `Successfully saved as: media/2114bef791b6111f12575439a7bbed73_4_0.200_100_1_0_20-trteX.fasta.gz`
+
 `Successfully saved as: media/2114bef791b6111f12575439a7bbed73_4_0.200_100_1_0_20-trteY.fasta.gz`
+
 `...`
+
 `Model saved as: models/best_model_with_params-1468314846.pkl`
 
 After that, you should run `predict.py`:
