@@ -247,7 +247,7 @@ if __name__ == "__main__":
     debug = results.debug
     read_size = results.length
 
-    trX, teX, trY, teY, trteX, trteY, num_of_classes, train_class_sizes = load_datasets_from_file(filename, debug=True, read_size=read_size)
+    trX, teX, trY, teY, trteX, trteY, num_of_classes, train_class_sizes = load_datasets_from_file(filename, debug=debug, read_size=read_size)
 
     print(trX.shape)
     input_len = trX.shape[1]
