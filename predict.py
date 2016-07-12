@@ -75,6 +75,8 @@ predict = theano.function(inputs=[X], outputs=y_x, allow_input_downcast=True)
 # load class sizes
 class_sizes = params[5]
 
+teX = teX.reshape(-1, 1, 1, teX.shape[1])
+
 final_results = predict(teX)
 sum_results = np.sum(final_results, axis=0)
 
