@@ -356,6 +356,8 @@ def load_data(filename, test=0.2, transmission_dict=None, depth=4, sample=0.2, r
     assert data.keys() == labels.keys()
     number_of_classes = len(data.keys())
 
+    tr_class_sizes = [class_size[class_id] for class_id in trY]
+
     if onehot:
         trY = one_hot(trY, number_of_classes)
         teY = one_hot(teY, number_of_classes)
@@ -364,8 +366,6 @@ def load_data(filename, test=0.2, transmission_dict=None, depth=4, sample=0.2, r
         trY = np.asarray(trY)
         teY = np.asarray(teY)
         trteY = np.asarray(trteY)
-
-    tr_class_sizes = [class_size[class_id] for class_id in trY]
 
     return np.asarray(trX), np.asarray(teX), np.asarray(trY), np.asarray(teY), np.asarray(trteX), np.asarray(trteY), \
            number_of_classes, tr_class_sizes
