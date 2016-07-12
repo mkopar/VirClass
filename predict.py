@@ -50,22 +50,22 @@ params = load_model(best_model)
 
 conv_params = params[6]
 # conv_params = (conv1_stride, stride1, downscale1, stride2, downscale2, stride3, downscale3)
-conv1_stride = 4
-assert conv1_stride == conv_params[0]
-stride1 = 2
-assert stride1 == conv_params[1]
-downscale1 = 3
-assert downscale1 == conv_params[2]
-stride2 = 2
-assert stride2 == conv_params[3]
-downscale2 = 2
-assert downscale2 == conv_params[4]
-stride3 = 2
-assert stride3 == conv_params[5]
-downscale3 = 1
-assert downscale3 == conv_params[6]
+# conv1_stride = 4
+conv1_stride = conv_params[0]
+# stride1 = 2
+stride1 = conv_params[1]
+# downscale1 = 3
+downscale1 = conv_params[2]
+# stride2 = 2
+stride2 = conv_params[3]
+# downscale2 = 2
+downscale2 = conv_params[4]
+# stride3 = 2
+stride3 = conv_params[5]
+# downscale3 = 1
+downscale3 = conv_params[6]
 
-l1, l2, l3, l4, py_x = model(X=X, w=params[0], w2=params[1], w3=params[2], w4=params[3], p_drop_conv=0., p_drop_hidden=0., w_o=params[4])
+l1, l2, l3, l4, py_x = model(X=X, w=params[0], w2=params[1], w3=params[2], w4=params[3], p_drop_conv=0., p_drop_hidden=0., w_o=params[4], conv_params)
 #y_x = T.argmax(py_x, axis=1) # maxima predictions
 y_x = py_x
 

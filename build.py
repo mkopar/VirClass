@@ -69,7 +69,7 @@ def RMSprop(cost, params, lr=0.001, rho=0.9, epsilon=1e-6):
         updates.append((p, p - lr * g))
     return updates
 
-def model(X, w, w2, w3, w4, p_drop_conv, p_drop_hidden, w_o):
+def model(X, w, w2, w3, w4, p_drop_conv, p_drop_hidden, w_o, conv_params=None):
     """
         Perform convolution and everything belonging to it.
         Code is split into 4 "blocks" - 3 blocks of computation and last block where we have fully connected layer.
@@ -79,6 +79,14 @@ def model(X, w, w2, w3, w4, p_drop_conv, p_drop_hidden, w_o):
         Last layer is fully connected layer, which connects all the filters to 500 hidden nodes. These nodes are then
         connected to the output nodes.
     """
+    if conv_params is not None:
+        conv1_stride = conv_params[0]
+        stride1 = conv_params[1]
+        downscale1 = conv_params[2]
+        stride2 = conv_params[3]
+        downscale2 = conv_params[4]
+        stride3 = conv_params[5]
+        downscale3 = conv_params[6]
     # block of computation
     # border_mode='valid': apply filter wherever it completely overlaps with the input
     l1a = rectify(conv2d(X, w, border_mode='valid', subsample=(1, conv1_stride))) # stride along one (horizontal) dimension only
