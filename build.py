@@ -285,7 +285,7 @@ if __name__ == "__main__":
             break
         elif curr_score > (best_score + epsilon):
             best_score = curr_score
-            count_best = 5  # reset counter
+            count_best = 10  # reset counter
         else:
             count_best -= 1
 
