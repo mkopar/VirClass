@@ -26,7 +26,7 @@ def load_model(filename):
     else:
         with f:
             loaded_obj = cPickle.load(f)
-    return loaded_obj
+    return np.asarray(loaded_obj)
 
 parser2 = argparse.ArgumentParser()
 parser2.add_argument("teX", help="Provide filename for test dataset you want to use (reads). It should have been in 'media/'"
