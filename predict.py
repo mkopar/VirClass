@@ -33,8 +33,8 @@ parser2.add_argument("teX", help="Provide filename for test dataset you want to 
                                  "directory and filename should end with '-teX.fasta.gz'", type=str)
 parser2.add_argument("best_model", help="Provide filename for the best model. Filename must include directory. Must be of"
                                         "format 'best_model_with_params-[timestamp].pkl'.", type=str)
-parser2.add_argument("-teY", help="Provide filename for test dataset you want to use (classes). It should have been in 'media/'"
-                                  "directory and filename should end with '-teY.fasta.gz'", type=str)
+# parser2.add_argument("-teY", help="Provide filename for test dataset you want to use (classes). It should have been in 'media/'"
+#                                   "directory and filename should end with '-teY.fasta.gz'", type=str)
 results = parser2.parse_args()
 teX = np.asarray(load_dataset(results.teX))
 teX = teX.reshape(-1, 1, 1, teX.shape[1])
@@ -88,6 +88,8 @@ final_results = predict(teX)
 sum_results = np.sum(final_results, axis=0)
 
 # detect which classes are present in teX
+print class_sizes.values()
+print class_sizes
 assert class_sizes.values() == sum_results.shape[1]
 weighted_vector = [float(a) / b for a, b in zip(sum_results, class_sizes.values())]
 norm_vector = [x / sum(weighted_vector) for x in weighted_vector]
@@ -96,5 +98,3 @@ sorted_norm_dict = sorted(norm_dict.items(), key=operator.itemgetter(1), reverse
 print "raw predicted values: ", sum_results
 print "weighted and normed predicted values: ", weighted_vector
 print "sorted probabilities: ", sorted_norm_dict
-print "expected values: ", teY
-print
