@@ -146,7 +146,7 @@ def load_datasets_from_file(filename, debug=False, read_size=100):
         seed = 0
         taxonomy_el_count = 20
     else:
-        seed = random.randint(0, sys.maxint)
+        seed = random.randint(0, 4294967295)
         taxonomy_el_count = -1
     if not filename:
         filename = "%s_%d_%.3f_%d_%d_%d_%d%s" % (hashlib.md5(str(sorted(get_gids()))).hexdigest(), depth, sample, read_size, onehot,
