@@ -75,7 +75,7 @@ predict = theano.function(inputs=[X], outputs=y_x, allow_input_downcast=True)
 # load class sizes
 class_sizes = params[5]
 
-final_results = np.array([predict(teX_val) for teX_val in teX])
+final_results = predict(teX)
 sum_results = np.sum(final_results, axis=0)
 
 # detect which classes are present in teX
