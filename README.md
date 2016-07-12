@@ -178,8 +178,7 @@ pregenerated the files you need for prediction.
 
 Both main scripts have help if you find troubles with running them.
 
-It is best if user can provide that directories `media/`, `cache/` and `models/`
-are present and have the right permissions.
-Folder `cache` stores records from NCBI website to avoid downloading it every time we want to run the tool.
-Folder `media` stores datasets for train and test and other data.
-Folder `models` stores best models with few other params for use in prediction.
+Folder `cache/` stores records from NCBI website to avoid downloading it every time we want to run the tool.
+Folder `media/` stores datasets for train and test and other data.
+Folder `models/` stores best models with few other params for use in prediction.
+It is best if user can provide that directories `media/`, `cache/` and `models/` are present and have the right permissions.
