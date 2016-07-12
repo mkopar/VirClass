@@ -223,68 +223,68 @@ def init_net(num_of_classes, input_len):
 
     return params, X, Y, cost, updates, y_x
 
-print "start:", time.strftime('%X %x %Z')
-# start = int(time.gmtime(0))
+if __name__ == "__main__":
+    print "start:", time.strftime('%X %x %Z')
+    # start = int(time.gmtime(0))
 
-# TODO - parse filename argument
-# arguments - filename, debug, input length
-parser = argparse.ArgumentParser()
-parser.add_argument("-f", "--filename", help="Provide filename for dataset you want to use. "
-                                             "It MUST be in 'media/' folder in current directory. If None is given then dataset"
-                                             "is built from NCBI database.", type=str, default="")
-parser.add_argument("-d", "--debug", action="store_true", help="If you want the enable debug mode, call program with this flag.", default=False)
-parser.add_argument("-l", "--length", help="Input length - how big chunks you want to be sequences sliced to.", default=100, type=int)
-results = parser.parse_args()
-filename = results.filename
-debug = results.debug
-read_size = results.length
+    # arguments - filename, debug, input length
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-f", "--filename", help="Provide filename for dataset you want to use. "
+                                                 "It MUST be in 'media/' folder in current directory. If None is given then dataset"
+                                                 "is built from NCBI database.", type=str, default="")
+    parser.add_argument("-d", "--debug", action="store_true", help="If you want the enable debug mode, call program with this flag.", default=False)
+    parser.add_argument("-l", "--length", help="Input length - how big chunks you want to be sequences sliced to.", default=100, type=int)
+    results = parser.parse_args()
+    filename = results.filename
+    debug = results.debug
+    read_size = results.length
 
-trX, teX, trY, teY, trteX, trteY, num_of_classes, train_class_sizes = load_datasets_from_file(filename, debug=True, read_size=read_size)
+    trX, teX, trY, teY, trteX, trteY, num_of_classes, train_class_sizes = load_datasets_from_file(filename, debug=True, read_size=read_size)
 
-print(trX.shape)
-input_len = trX.shape[1]
-trX = trX.reshape(-1, 1, 1, input_len)
-teX = teX.reshape(-1, 1, 1, input_len)
-trteX = trteX.reshape(-1, 1, 1, input_len)
+    print(trX.shape)
+    input_len = trX.shape[1]
+    trX = trX.reshape(-1, 1, 1, input_len)
+    teX = teX.reshape(-1, 1, 1, input_len)
+    trteX = trteX.reshape(-1, 1, 1, input_len)
 
-# params for model and cascade initialization
-conv1_stride = 4
-stride1 = 2
-downscale1 = 3
-stride2 = 2
-downscale2 = 2
-stride3 = 2
-downscale3 = 1
+    # params for model and cascade initialization
+    conv1_stride = 4
+    stride1 = 2
+    downscale1 = 3
+    stride2 = 2
+    downscale2 = 2
+    stride3 = 2
+    downscale3 = 1
 
-params, X, Y, cost, updates, y_x = init_net(num_of_classes, input_len)
+    params, X, Y, cost, updates, y_x = init_net(num_of_classes, input_len)
 
-# compile train and predict function
-train = theano.function(inputs=[X, Y], outputs=cost, updates=updates, allow_input_downcast=True)
-predict = theano.function(inputs=[X], outputs=y_x, allow_input_downcast=True)
+    # compile train and predict function
+    train = theano.function(inputs=[X, Y], outputs=cost, updates=updates, allow_input_downcast=True)
+    predict = theano.function(inputs=[X], outputs=y_x, allow_input_downcast=True)
 
-epsilon = 0.005  # if evaluation score does not improve for 0,5% every 5 tries, then stop evaluating - we get best model
-best_score = -1
-count_best = 10
-iter = 100
-for i in range(iter):
-    for start, end in zip(range(0, len(trX), 128), range(128, len(trX), 128)):
-        cost = train(trX[start:end], trY[start:end])
-    # evaluate model on train_test data, not on test data!
-    curr_score = (np.mean(np.argmax(trteY, axis=1) == predict(trteX)))
-    print "%.5f" % curr_score
-    if count_best == 0:
-        break
-    elif curr_score > (best_score + epsilon):
-        best_score = curr_score
-        count_best = 5  # reset counter
-    else:
-        count_best -= 1
+    epsilon = 0.005  # if evaluation score does not improve for 0,5% every 5 tries, then stop evaluating - we get best model
+    best_score = -1
+    count_best = 10
+    iter = 100
+    for i in range(iter):
+        for start, end in zip(range(0, len(trX), 128), range(128, len(trX), 128)):
+            cost = train(trX[start:end], trY[start:end])
+        # evaluate model on train_test data, not on test data!
+        curr_score = (np.mean(np.argmax(trteY, axis=1) == predict(trteX)))
+        print "%.5f" % curr_score
+        if count_best == 0:
+            break
+        elif curr_score > (best_score + epsilon):
+            best_score = curr_score
+            count_best = 5  # reset counter
+        else:
+            count_best -= 1
 
-# save best model to models directory; add also parameters for net initialization and train class sizes
-conv_params = (conv1_stride, stride1, downscale1, stride2, downscale2, stride3, downscale3)
-params.append(train_class_sizes)
-params.append(conv_params)
-save_model("models/best_model_with_params-%d.pkl" % int(time.time()), params)
+    # save best model to models directory; add also parameters for net initialization and train class sizes
+    conv_params = (conv1_stride, stride1, downscale1, stride2, downscale2, stride3, downscale3)
+    params.append(train_class_sizes)
+    params.append(conv_params)
+    save_model("models/best_model_with_params-%d.pkl" % int(time.time()), params)
 
-print "stop:", time.strftime('%X %x %Z')
-#print "elapsed: ", (int(time.gmtime(0)) - start)
+    print "stop:", time.strftime('%X %x %Z')
+    #print "elapsed: ", (int(time.gmtime(0)) - start)
