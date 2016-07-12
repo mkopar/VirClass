@@ -29,15 +29,15 @@ sample short reads from chosen virus sequence. The bigger the sample, the longer
 to build the dataset. After that we transform letters into numeric representation, where in our
 code we use the following transmission dictionary:
 
-    * `A : [1, 0, 0, 0]`
-    * `T : [0, 1, 0, 0]`
-    * `C : [0, 0, 1, 0]`
-    * `G : [0, 0, 0, 1]`
+* `A : [1, 0, 0, 0]`
+* `T : [0, 1, 0, 0]`
+* `C : [0, 0, 1, 0]`
+* `G : [0, 0, 0, 1]`
 
 In the example above letters, which are not in the transmission dictionary (e.g. 'M', 'Y', ...) will
 get the following numeric representation:
 
-    * `_ (everything else) : [1, 1, 1, 1]`
+* `_ (everything else) : [1, 1, 1, 1]`
 
 If you do not provide transmission dictionary, then every letter will be represented by one bit.
 
@@ -95,24 +95,24 @@ because it is dependent on downscale parameters for each layer. Output of the ne
 is a list of probabilities for each class.
 
 At the end of fitting the model, the best model is evaluated and saved for
-further usage in predict.py module, where we actually perform prediction experiments.
+further usage in `predict.py` module, where we actually perform prediction experiments.
 
 For more detailed info on how the `build.py` works please see [here](https://www.youtube.com/watch?v=S75EdAcXHKk).
 
-## Results
+## Software
+
 Current version of tool is developed primarily for command line use. This we believe is simplier for users
 to perform their own predictions and/or building the model. It is on our TODO list to build some useful
-models and push it to github for users to test the tool by themselves, as building the neural net takes enormous
+models and push it to repository for users to test the tool by themselves, as building the neural net takes quite a big
 amount of time.
-
-## Software
 
 Tool consists of 4 python scripts - `load.py`, `load_ncbi.py`, `build.py` and `predict.py`.
 All code is written in Python 2.7.2. We used libraries such as numpy, BioPython and Theano.
 The main scripts are `build.py` and `predict.py`.
+
 `build.py`:
-    * learning data file [OPTIONAL]
-    * sliding window size [OPTIONAL]
+    `learning data file [OPTIONAL]`
+    `sliding window size [OPTIONAL]`
 
 If you provide file with learning data and corresponding class labels, than this file will be used for learning model.
 File must be in 'media/' directory. If you do not provide file with learning data, new dataset will be generated.
@@ -125,9 +125,9 @@ Outputs of this file are best model, saved in specific file in 'models/' directo
 and (naive) score for the best model.
 
 `predict.py`:
-    * prediction data file [MANDATORY]
-    * class labels file [OPTIONAL]
-    * model filename [MANDATORY]
+    `prediction data file [MANDATORY]`
+    `class labels file [OPTIONAL]`
+    `model filename [MANDATORY]`
 
 In order for `predict.py` to work, user must provide prediction data file and model filename he wants to use.
 Class labels file is optional because it is only possible to use it when we perform controlled experiments with
