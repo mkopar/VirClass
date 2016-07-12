@@ -38,7 +38,7 @@ parser2.add_argument("best_model", help="Provide filename for the best model. Fi
 results = parser2.parse_args()
 teX = np.asarray(load_dataset(results.teX))
 teX = teX.reshape(-1, 1, 1, teX.shape[1])
-teY = np.asarray(load_dataset(results.teY))
+#teY = np.asarray(load_dataset(results.teY))
 best_model = results.best_model
 
 # teX_filename = "media/2114bef791b6111f12575439a7bbed73_4_0.200_100_1_0_20-teX.fasta.gz"
