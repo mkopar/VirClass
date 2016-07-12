@@ -65,7 +65,7 @@ stride3 = conv_params[5]
 # downscale3 = 1
 downscale3 = conv_params[6]
 
-l1, l2, l3, l4, py_x = model(X=X, w=params[0], w2=params[1], w3=params[2], w4=params[3], p_drop_conv=0., p_drop_hidden=0., w_o=params[4], conv_params)
+l1, l2, l3, l4, py_x = model(X=X, w=params[0], w2=params[1], w3=params[2], w4=params[3], p_drop_conv=0., p_drop_hidden=0., w_o=params[4], conv_params=conv_params)
 #y_x = T.argmax(py_x, axis=1) # maxima predictions
 y_x = py_x
 
