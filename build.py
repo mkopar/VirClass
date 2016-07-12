@@ -224,7 +224,7 @@ def init_net(num_of_classes, input_len):
     return params, X, Y, cost, updates, y_x
 
 print "start:", time.strftime('%X %x %Z')
-start = int(time.gmtime(0))
+# start = int(time.gmtime(0))
 
 # TODO - parse filename argument
 # arguments - filename, debug, input length
