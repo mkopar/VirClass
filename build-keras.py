@@ -4,7 +4,6 @@ import random
 import time
 from keras.models import Sequential
 from keras.layers import Dense, MaxPooling1D, Activation, Convolution1D, Flatten, Dropout
-import keras.backend as K
 from load_ncbi import get_gids
 from load import load_data
 
@@ -69,7 +68,7 @@ def init_keras(input_shape, p_drop_conv, p_drop_hidden, number_of_classes, conv_
     # layer 1
     model.add(Convolution1D(stride1, conv1_stride, border_mode='valid', input_shape=input_shape))
     model.add(Activation("relu"))  # rectified linear unit
-    model.add(MaxPooling1D(pool_length=downscale1, stride=(1, stride1), border_mode='valid'))
+    model.add(MaxPooling1D(pool_length=downscale1, stride=stride1, border_mode='valid'))
     model.add(Dropout(p=p_drop_conv))
 
     # l1a = rectify(conv2d(X, w, border_mode='valid', subsample=(1, conv1_stride))) # stride along one (horizontal) dimension only
@@ -83,7 +82,7 @@ def init_keras(input_shape, p_drop_conv, p_drop_hidden, number_of_classes, conv_
 
     model.add(Convolution1D(stride2, 1, border_mode='valid'))
     model.add(Activation("relu"))  # rectified linear unit
-    model.add(MaxPooling1D(pool_length=downscale2, stride=(1, stride2), border_mode='valid'))
+    model.add(MaxPooling1D(pool_length=downscale2, stride=stride2, border_mode='valid'))
     model.add(Dropout(p=p_drop_conv))
 
     # l3a = rectify(conv2d(l2, w3, subsample=(1, 1))) # stride along horizontal
@@ -93,7 +92,7 @@ def init_keras(input_shape, p_drop_conv, p_drop_hidden, number_of_classes, conv_
 
     model.add(Convolution1D(stride3, 1, border_mode='valid'))
     model.add(Activation("relu"))  # rectified linear unit
-    model.add(MaxPooling1D(pool_length=downscale3, stride=(1, stride1), border_mode='valid'))
+    model.add(MaxPooling1D(pool_length=downscale3, stride=stride3, border_mode='valid'))
     model.add(Dropout(p=p_drop_conv))
     model.add(Flatten())
 
@@ -125,6 +124,7 @@ if __name__ == "__main__":
     filename = results.filename
     debug = results.debug
     read_size = results.length
+    debug = True
 
     trX, teX, trY, teY, trteX, trteY, num_of_classes, train_class_sizes = load_datasets_from_file(filename, debug=debug, read_size=read_size)
 
@@ -158,10 +158,8 @@ if __name__ == "__main__":
 
     model.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['accuracy'])
 
-    # a bi se dalo tukaj dejansko nardit tako, da ne rabim prej podatkov pripravljat, ampak mu vrzem notri celoten
-    # dataset in potem on sam razdeli na train in test? https://keras.io/models/sequential/ (fit sklop, validation_split)
-
-    model.fit(trX, trY, 128, len(trX)/128, verbose=1)
+    model.fit(trX, trY, batch_size=128, nb_epoch=len(trX)/128, verbose=1)
+    # error here - wrong input shape
     model.evaluate(trteX, trteY, 128, verbose=1)
 
     model.save("model.h5")
