@@ -68,11 +68,11 @@ setup(
     },
 
     # create entry points for build, predict ipd.
-    entry_points={
-        'console_scripts': [
-            'VirClass = VirClass.cli:main',
-        ],
-    },
+    # entry_points={
+    #     'console_scripts': [
+    #         'VirClass = VirClass.cli:main',
+    #     ],
+    # },
 
     classifiers=[
         'Development Status :: 4 - Beta',

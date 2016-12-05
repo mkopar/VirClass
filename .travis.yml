@@ -45,8 +45,8 @@ matrix:
       python: "3.5"
     - env: TOX_ENV=linters
       python: "3.5"
-    - env: TOX_ENV=docs
-      python: "3.5"
+    #- env: TOX_ENV=docs
+    #  python: "3.5"
     - env: TOX_ENV=packaging
       python: "3.5"
 
