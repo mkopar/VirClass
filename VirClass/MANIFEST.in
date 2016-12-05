@@ -1,0 +1,6 @@
+# include meta data
+include README.md
+include LICENSE
+# include tests and files needed by tests
+include .pylintrc tox.ini
+recursive-include VirClass/tests *.py
