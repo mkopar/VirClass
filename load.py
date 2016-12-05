@@ -35,6 +35,8 @@ def one_hot(x, n):
     :param n: number of classes
     :return: Y matrix in binary representation
     """
+    if np.max(x) > n:
+        raise AssertionError("USER ERROR - cannot create numpy array; number of classes must be bigger than max number of list")
     if type(x) == list:
         x = np.array(x)
     x = x.flatten()
@@ -71,11 +73,13 @@ def seq_to_bits(vec, unique_nucleotides=None, transmission_dict=None):
 
     if transmission_dict is None:
         if unique_nucleotides is None:
-            print "Problems - number of unique nucleotides and transmission dictionary not present. Exiting now."
-            sys.exit(0)
+            raise AssertionError("USER ERROR - number of unique nucleotides and transmission dictionary not present.")
         transmission_dict = {}
         for el in unique_nucleotides:
             transmission_dict[el] = [1 if x == el else 0 for x in unique_nucleotides]
+    else:
+        if len(transmission_dict.keys()) != len(transmission_dict.itervalues().next()):
+            print "WARNING: number of keys in transmission dictionary and length of either value aren't same!"
 
     bits_vector = []
     for i, c in enumerate(vec):
@@ -83,16 +87,6 @@ def seq_to_bits(vec, unique_nucleotides=None, transmission_dict=None):
             bits_vector += transmission_dict[c]
         else:
             bits_vector += [1 for _ in transmission_dict.keys()]
-        # if c == "A":
-        #     bits_vector += [1, 0, 0, 0]
-        # elif c == "T":
-        #     bits_vector += [0, 1, 0, 0]
-        # elif c == "C":
-        #     bits_vector += [0, 0, 1, 0]
-        # elif c == "G":
-        #     bits_vector += [0, 0, 0, 1]
-        # else:
-        #     bits_vector += [1, 1, 1, 1]
     return bits_vector
 
 
@@ -622,7 +616,7 @@ def load_from_file(filename):
 
 if __name__ == "__main__":
     transmission_dict = {'A': [1, 0, 0, 0], 'T': [0, 1, 0, 0], 'C': [0, 0, 1, 0], 'G': [0, 0, 0, 1]}
-    data, tax = load_from_file_fasta("test-0.20-0-4-0.20-100-onehot.fasta.gz", depth=4)
+    data, tax = load_from_file_fasta("blabla-test.fasta.gz", depth=4, taxonomy_el_count=10)
 
     format_str = "{:11}\t{:80}\t{:7}"
 

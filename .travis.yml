@@ -1,0 +1,69 @@
+sudo: required
+# sudo: false   # use container-based infrastructure
+
+dist: trusty
+
+language: python
+
+# XXX: APT packages cannot be instaled with apt addon, because they are not
+#      whitelisted by Travis:
+#      https://github.com/travis-ci/apt-package-whitelist#package-approval-process
+# After whitelisting them, remove them from install section and change sudo
+# from `required` to `false` to enable builds on new Travis infrastructure which
+# (among other good things) supports caching.
+
+# addons:
+#     apt:
+#         packages:
+#             - gfortran
+#             - libblas-dev
+#             - liblapack-dev
+#             - samtools
+#             - rna-star
+
+# cache:
+#     - ccache
+#     - pip
+
+# before_cache:   # prevent logs from caching
+#     - rm -f $HOME/.cache/pip/log/debug.log
+
+install:
+    - pip install tox
+    - pip install numpy
+    - pip install scipy
+    # install apt packages
+    - sudo apt-get update
+    - sudo apt-get install python-dev g++ libblas-dev liblapack-dev
+    - sudo apt-get install gfortran libblas-dev liblapack-dev
+
+matrix:
+  include:
+    #- env: TOX_ENV=py34
+    #  python: "3.4"
+    #- env: TOX_ENV=py35
+    #  python: "3.5"
+    #- env: TOX_ENV=linters
+    #  python: "3.5"
+    #- env: TOX_ENV=docs
+    #  python: "3.5"
+    #- env: TOX_ENV=packaging
+    #  python: "3.5"
+    - env: TOX_ENV=py27
+      python: "2.7"
+    - env: TOX_ENV=linters
+      python: "2.7"
+    #- env: TOX_ENV=docs
+    #  python: "2.7"
+    - env: TOX_ENV=packaging
+      python: "2.7"
+
+script:
+  - tox -e $TOX_ENV
+
+after_success:
+  - pip install codecov
+  - codecov -e TOX_ENV
+
+notifications:
+    email: false
