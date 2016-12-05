@@ -14,7 +14,7 @@ with open(path.join(base_dir, 'README.md'), encoding='utf-8') as f:
 
 # Get package metadata from 'iCount/__about__.py' file
 about = {}
-with open(path.join(base_dir, 'Virus-classification', '__about__.py'), encoding='utf-8') as f:
+with open(path.join(base_dir, 'VirClass', '__about__.py'), encoding='utf-8') as f:
     exec(f.read(), about)
 
 setup(
@@ -34,11 +34,11 @@ setup(
 
     # exclude tests from built/installed package
     packages=find_packages(exclude=['*.tests', '*.tests.*']),
-    package_data={
-        'Virus-classification': [
-            'examples/*.sh',
-        ]
-    },
+    # package_data={
+    #     'VirClass': [
+    #         'examples/*.sh',
+    #     ]
+    # },
     install_requires={
         'numpy',
         'scipy',
@@ -67,11 +67,12 @@ setup(
         ],
     },
 
-    # entry_points={
-    #     'console_scripts': [
-    #         'iCount = iCount.cli:main',
-    #     ],
-    # },
+    # create entry points for build, predict ipd.
+    entry_points={
+        'console_scripts': [
+            'VirClass = VirClass.cli:main',
+        ],
+    },
 
     classifiers=[
         'Development Status :: 4 - Beta',
