@@ -1,5 +1,5 @@
 import glob
-import cPickle
+import pickle
 
 __author__ = 'Matej'
 
@@ -28,7 +28,7 @@ def get_gids(term="Viruses[Organism] AND srcdb_refseq[PROP] AND complete_genome"
     handle = Entrez.esearch(db="nucleotide", term=term, retmax=100000)
     record = Entrez.read(handle)
     id_list = sorted(set(record["IdList"]))
-    print(record["Count"], len(record["IdList"]), len(id_list))
+    print((record["Count"], len(record["IdList"]), len(id_list)))
     return id_list
 
 
@@ -39,17 +39,17 @@ def get_rec(rec_ID):
     :return: record
     """
     try:
-        rec = cPickle.load(open(dir + "/%s.pkl.gz" % rec_ID, "rb"))
+        rec = pickle.load(open(dir + "/%s.pkl.gz" % rec_ID, "rb"))
     except IOError:  # , FileNotFoundError:
-        print("downloading sequence id:", rec_ID)
+        print(("downloading sequence id:", rec_ID))
         handle = Entrez.efetch(db="nucleotide", rettype="gb", id=rec_ID)
         rec = SeqIO.read(handle, "gb")
         handle.close()
-        cPickle.dump(rec, open(dir + "/%s.pkl.gz" % rec_ID, "wb"), -1)
-        print("genome size:", len(rec.seq), rec.seq[:20] + "...")
-        print("Taxonomy:", rec.annotations['taxonomy'])
-        for a, t in rec.annotations.items():
-            print("  %s: %s" % (a, str(t)[:15]))
+        pickle.dump(rec, open(dir + "/%s.pkl.gz" % rec_ID, "wb"), -1)
+        print(("genome size:", len(rec.seq), rec.seq[:20] + "..."))
+        print(("Taxonomy:", rec.annotations['taxonomy']))
+        for a, t in list(rec.annotations.items()):
+            print(("  %s: %s" % (a, str(t)[:15])))
         print()
     return rec
 
@@ -135,7 +135,7 @@ def filter_classification(rec, to_filter):
         for temp_tax_el in temp_tax:
             if temp_tax_el in to_filter:
                 in_to_filter = True
-                print "filtered ", rec.annotations["taxonomy"]
+                print("filtered ", rec.annotations["taxonomy"])
     return in_to_filter
 
 
@@ -153,7 +153,7 @@ def print_nice(taxonomy, level=0):
             else:
                 continue
         else:
-            print level * "\t", i.replace("->", "", 1), len(taxonomy[i]["data"])
+            print(level * "\t", i.replace("->", "", 1), len(taxonomy[i]["data"]))
             print_nice(taxonomy[i], level + 1)
 
 
@@ -164,9 +164,9 @@ def load_whole_taxonomy():
     """
     taxonomy = get_taxonomy(get_gids())
     list_nodes = get_list_nodes_ids_labels(taxonomy)
-    data, labels = zip(*list_nodes)
+    data, labels = list(zip(*list_nodes))
     for label in labels:
-        print label
+        print(label)
     label_number = -1
     temp_l = []
     label_n = []
@@ -209,7 +209,7 @@ def get_taxonomy(id_list, count=-1):
                     temp_count += 1
         except Exception as e:
             print("problems...")
-            print e
+            print(e)
 
     return taxonomy
 
@@ -226,7 +226,7 @@ def remove_lists(taxonomy):
 
     # check for recurse exit
     if type(taxonomy) is defaultdict or type(taxonomy) is dict:
-        for i in [x for x in taxonomy.keys() if x != "data"]:
+        for i in [x for x in list(taxonomy.keys()) if x != "data"]:
             if set(taxonomy[i]) == set(list({"data"})):
                 # if parent has only one list node, remove it
                 #if len([x for x in taxonomy.keys() if x != "data"]) == 1:
@@ -247,7 +247,7 @@ def get_list_nodes_unique(taxonomy, parent=""):
     """
     # preverjeno na roke in dela
     list_nodes = list()
-    keys = [x for x in taxonomy.keys() if x != "data"]
+    keys = [x for x in list(taxonomy.keys()) if x != "data"]
     for i in keys:
         if set(taxonomy[i]) == set(list({"data"})):
             list_nodes.append(i)
@@ -263,7 +263,7 @@ def count_list_nodes(taxonomy):
     :return: int
     """
     count = 0
-    keys = [x for x in taxonomy.keys() if x != "data"]
+    keys = [x for x in list(taxonomy.keys()) if x != "data"]
     for i in keys:
         if set(taxonomy[i]) == set(list({"data"})):
             if i == keys[-1]:
@@ -283,9 +283,9 @@ def get_list_nodes_ids_labels(d, parent=""):
     :param parent: parent
     :return: list of tuples (id, class)
     """
-    if len(d.keys()) > 1 or d.keys() == ["viruses"]:
+    if len(list(d.keys())) > 1 or list(d.keys()) == ["viruses"]:
         temp = []
-        for k in [x for x in d.keys() if x != "data"]:
+        for k in [x for x in list(d.keys()) if x != "data"]:
             temp += get_list_nodes_ids_labels(d[k], k)
         return temp
     else:
@@ -302,7 +302,7 @@ def count_examples(taxonomy):
     :return: sum of examples
     """
     count = 0
-    keys = [x for x in taxonomy.keys() if x != "data"]
+    keys = [x for x in list(taxonomy.keys()) if x != "data"]
     for i in keys:
         if set(taxonomy[i]) == set(list({"data"})):
             if i == keys[-1]:
@@ -322,7 +322,7 @@ def get_all_nodes(taxonomy, parent=""):
     :return: all nodes
     """
     all_nodes = list()
-    keys = [x for x in taxonomy.keys() if x != "data"]
+    keys = [x for x in list(taxonomy.keys()) if x != "data"]
     for i in keys:
         # if we want all non-list nodes, than this stays, otherwise comment this
         # if len([x for x in taxonomy[i].keys() if x != "data"]) == 0:
@@ -351,13 +351,13 @@ def load_seqs_from_ncbi(seq_len=100, skip_read=0, overlap=50, taxonomy_el_count=
                 dictionary taxonomy - each genome ID key contains taxonomy for specific genome
     """
     data, labels = run(taxonomy_el_count)
-    print "getting sequences..."
+    print("getting sequences...")
     seqs, tax = load_oid_seq_classification(data)
 
     reads = defaultdict(list)
 
     if seq_len != -1:
-        for oid, seq in seqs.iteritems():
+        for oid, seq in seqs.items():
             while seq:
                 if len(seq) < seq_len:
                     # we don't want shorter sequences than seq_len (shorter than 100)
@@ -379,7 +379,7 @@ def run(taxonomy_el_count=-1):
     taxonomy = get_taxonomy(get_gids(), count=taxonomy_el_count)
     # remove_lists(taxonomy)
     list_nodes = get_list_nodes_ids_labels(taxonomy)
-    data, labels = zip(*list_nodes)
+    data, labels = list(zip(*list_nodes))
     # for label in labels:
     #     print label
     label_number = -1
@@ -396,8 +396,8 @@ def run(taxonomy_el_count=-1):
 
 if __name__ == "__main__":
     taxonomy = get_taxonomy(get_gids())
-    print "no of examples after taxonomy was built: %d" % count_examples(taxonomy)
-    print "no of list nodes after taxonomy was built: %d" % count_list_nodes(taxonomy)
+    print("no of examples after taxonomy was built: %d" % count_examples(taxonomy))
+    print("no of list nodes after taxonomy was built: %d" % count_list_nodes(taxonomy))
     print_nice(taxonomy)
     remove_lists(taxonomy)
     print_nice(taxonomy)

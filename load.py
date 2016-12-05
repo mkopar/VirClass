@@ -11,7 +11,7 @@ from Bio.SeqRecord import SeqRecord
 import numpy as np
 import sys
 from sklearn import cross_validation
-from load_ncbi import run, load_seqs_from_ncbi, get_rec
+from .load_ncbi import run, load_seqs_from_ncbi, get_rec
 import matplotlib.pyplot as plt
 import pylab as P
 
@@ -78,15 +78,15 @@ def seq_to_bits(vec, unique_nucleotides=None, transmission_dict=None):
         for el in unique_nucleotides:
             transmission_dict[el] = [1 if x == el else 0 for x in unique_nucleotides]
     else:
-        if len(transmission_dict.keys()) != len(transmission_dict.itervalues().next()):
-            print "WARNING: number of keys in transmission dictionary and length of either value aren't same!"
+        if len(list(transmission_dict.keys())) != len(next(iter(transmission_dict.values()))):
+            print("WARNING: number of keys in transmission dictionary and length of either value aren't same!")
 
     bits_vector = []
     for i, c in enumerate(vec):
-        if c in transmission_dict.keys():
+        if c in list(transmission_dict.keys()):
             bits_vector += transmission_dict[c]
         else:
-            bits_vector += [1 for _ in transmission_dict.keys()]
+            bits_vector += [1 for _ in list(transmission_dict.keys())]
     return bits_vector
 
 
@@ -95,7 +95,7 @@ def histogram(values, name):
     :param values: values to show in histogram
     :param name: name for saving figure
     """
-    print max(values)
+    print(max(values))
     bins = np.arange(0, 5000000, 250000)
     P.hist(values, bins, histtype='bar', rwidth=0.8, log=True)
     plt.tight_layout()
@@ -141,7 +141,7 @@ def load_from_file_fasta(filename, depth=4, taxonomy_el_count=-1):
         assert os.path.isfile(filename)
         with gzip.open(filename, "r") as file:
             # read data
-            print "reading..."
+            print("reading...")
             for seq_record in SeqIO.parse(file, "fasta"):
                 oid = seq_record.id
                 classification = seq_record.description.split(oid)[1].strip()
@@ -152,8 +152,8 @@ def load_from_file_fasta(filename, depth=4, taxonomy_el_count=-1):
         data, tax = load_seqs_from_ncbi(seq_len=-1, skip_read=0, overlap=0, taxonomy_el_count=taxonomy_el_count)
         # save data
         with gzip.open(filename, "w") as file:
-            print "writing..."
-            for oid, seq in data.iteritems():
+            print("writing...")
+            for oid, seq in data.items():
                 tax[oid] = ';'.join(tax[oid].split(";")[:depth])
                 # prepare row
                 row = SeqRecord(Seq(seq), id=str(oid), description=tax[oid])
@@ -206,10 +206,10 @@ def save_dataset(filename, obj):
     """
     with gzip.open(filename, "wb") as f:
         pickle.dump(obj, f)
-    print "Successfully saved as: " + filename
+    print("Successfully saved as: " + filename)
 
 
-def load_data(filename, test=0.2, transmission_dict=None, depth=4, sample=0.2, read_size=100, onehot=True, seed=random.randint(0, sys.maxint), taxonomy_el_count=-1):
+def load_data(filename, test=0.2, transmission_dict=None, depth=4, sample=0.2, read_size=100, onehot=True, seed=random.randint(0, sys.maxsize), taxonomy_el_count=-1):
     """
     Main function for loading data. We expect, that fasta files with data are in media directory - if the file with
     given filename does not exist, we build a new one from NCBI database.
@@ -244,16 +244,16 @@ def load_data(filename, test=0.2, transmission_dict=None, depth=4, sample=0.2, r
     label_num = -1
     tax = {}
     class_size = defaultdict(int)
-    for id, l in labels.iteritems():
+    for id, l in labels.items():
         if l not in temp_l:
             temp_l.append(l)
             label_num += 1
         tax[id] = label_num
-        print label_num, len(data[id])
+        print(label_num, len(data[id]))
         class_size[label_num] += len(data[id])
 
-    for _class, sum in class_size.iteritems():
-        class_size[_class] = sum / tax.values().count(_class)
+    for _class, sum in class_size.items():
+        class_size[_class] = sum / list(tax.values()).count(_class)
 
     try:
         # we save files as something.fasta.gz, so we try to open those files - if they don't exist, generate new ones
@@ -284,9 +284,9 @@ def load_data(filename, test=0.2, transmission_dict=None, depth=4, sample=0.2, r
         trteY = []
 
         # keys must be same
-        assert data.keys() == labels.keys()
-        oids = [x for x in labels.keys()]
-        number_of_classes = len(data.keys())
+        assert list(data.keys()) == list(labels.keys())
+        oids = [x for x in list(labels.keys())]
+        number_of_classes = len(list(data.keys()))
 
         ss = cross_validation.LabelShuffleSplit(oids, n_iter=1, test_size=test, random_state=seed)
         for train_index, test_index in ss:
@@ -316,7 +316,7 @@ def load_data(filename, test=0.2, transmission_dict=None, depth=4, sample=0.2, r
                         trX.append(seq_to_bits(seq[:read_size], transmission_dict=transmission_dict))
                         trY.append(tax[tr_id])
                     else:
-                        print tr_id + " is not in train_index list!"
+                        print(tr_id + " is not in train_index list!")
                         sys.exit(0)
                     # don't use whole sequence, only every second, third etc (depending on sample percent) - use ceil to avoid decimals
                     seq = seq[int(math.ceil(read_size / sample)):]
@@ -347,7 +347,7 @@ def load_data(filename, test=0.2, transmission_dict=None, depth=4, sample=0.2, r
             save_dataset(dir + filename[:filename.index(".fasta.gz")] + "-trteX.fasta.gz", trteX)
             save_dataset(dir + filename[:filename.index(".fasta.gz")] + "-trteY.fasta.gz", trteY)
 
-    number_of_classes = len(class_size.keys())
+    number_of_classes = len(list(class_size.keys()))
 
     if onehot:
         trY = one_hot(trY, number_of_classes)
@@ -373,7 +373,7 @@ def load_seqs(ids):
     return [get_rec(x).seq._data for x in ids]
 
 
-def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.maxint), thresh=0.1, transmission_dict=None, save=False):
+def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.maxsize), thresh=0.1, transmission_dict=None, save=False):
     """
     In this method we want to simulate sequencing. We create samples in length of seq_len (in our case 100).
 
@@ -432,29 +432,29 @@ def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.
         os.makedirs(dir)
 
     try:
-        print "loading data and labels..."
+        print("loading data and labels...")
         data = pickle.load(open(dir + "/data-ids.pkl.gz", "rb"))
         labels = pickle.load(open(dir + "/labels.pkl.gz", "rb"))
     except IOError:
-        print "data and labels not found...\ngenerating data and labels..."
+        print("data and labels not found...\ngenerating data and labels...")
         data, labels = run()
         if save:
-            print "saving data and labels..."
+            print("saving data and labels...")
             pickle.dump(data, open(dir + "/data-ids.pkl.gz", "wb"), -1)
             pickle.dump(labels, open(dir + "/labels.pkl.gz", "wb"), -1)
 
-    print "getting sequences..."
+    print("getting sequences...")
     data = load_seqs(data)
 
     try:
-        print "loading train and test data for seed %d..." % seed
+        print("loading train and test data for seed %d..." % seed)
         trX = pickle.load(open(dir + "/tr%d-data-seed_%d-onehot_%d-threshold_%d.pkl.gz" % (ntrain, seed, int(onehot), thresh * 100), "rb"))
         trY = pickle.load(open(dir + "/tr%d-labels-seed_%d-onehot_%d-threshold_%d.pkl.gz" % (ntrain, seed, int(onehot), thresh * 100), "rb"))
         teX = pickle.load(open(dir + "/te%d-data-seed_%d-onehot_%d-threshold_%d.pkl.gz" % (ntest, seed, int(onehot), thresh * 100), "rb"))
         teY = pickle.load(open(dir + "/te%d-labels-seed_%d-onehot_%d-threshold_%d.pkl.gz" % (ntest, seed, int(onehot), thresh * 100), "rb"))
     except IOError:  # , FileNotFoundError:
-        print "train and test data not found for seed %d..." % seed
-        print "generating train and test data..."
+        print("train and test data not found for seed %d..." % seed)
+        print("generating train and test data...")
         number_of_classes = len(set(labels))
         # train_examples_per_class = int(ceil(ntrain / float(number_of_classes)))
         # test_examples_per_class = int(ceil(ntest / float(number_of_classes)))
@@ -475,10 +475,10 @@ def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.
         for label in set(labels):
             first = labels.index(label)
             last = len(labels) - labels[::-1].index(label)
-            print "number of examples in class: %d" % (last - first)
+            print("number of examples in class: %d" % (last - first))
 
             sum_lengths = sum(len(s) for s in data[first:last])
-            print "sum lengths of genomes: %d" % sum_lengths
+            print("sum lengths of genomes: %d" % sum_lengths)
 
             examples_in_class.append((last - first, sum_lengths))
             labels_lengths.append((sum_lengths, last - first))
@@ -489,14 +489,14 @@ def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.
             else:
                 smaller.append(label)
 
-        print "labels which sum of genome lengths are smaller than %d:" % threshold, smaller
+        print("labels which sum of genome lengths are smaller than %d:" % threshold, smaller)
 
         number_of_classes = len(labels_to_process)
         train_examples_per_class = int(math.ceil(ntrain / float(number_of_classes)))
         test_examples_per_class = int(math.ceil(ntest / float(number_of_classes)))
         examples_per_class = train_examples_per_class + test_examples_per_class
 
-        print "number of classes: %d, examples per class: %d" % (number_of_classes, examples_per_class)
+        print("number of classes: %d, examples per class: %d" % (number_of_classes, examples_per_class))
 
         # histogram(labels_lengths, "class_genome_lengths.png")
         # print sorted(examples_in_class)
@@ -508,8 +508,8 @@ def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.
         while temp_count < (ntrain + ntest):
             for label, first, last in labels_to_process:
 
-                vir_idx = random.choice(range(first, last))  # randomly choose virus from class
-                sample_idx = random.choice(range(0, (len(data[vir_idx])) - seq_len - 1))  # randomly sample virus
+                vir_idx = random.choice(list(range(first, last)))  # randomly choose virus from class
+                sample_idx = random.choice(list(range(0, (len(data[vir_idx])) - seq_len - 1)))  # randomly sample virus
 
                 if temp_count < ntrain:
                     trX.append(seq_to_bits(data[vir_idx][sample_idx:sample_idx + seq_len], transmission_dict=transmission_dict))
@@ -547,17 +547,17 @@ def seq_load(ntrain=50000, ntest=10000, onehot=True, seed=random.randint(0, sys.
         assert test_examples_per_class == teY.count(labels_to_process[-1][0])
 
         if save:
-            print "saving train and test data for seed %d..." % seed
+            print("saving train and test data for seed %d..." % seed)
             pickle.dump(trX, open(dir + "/tr%d-data-seed_%d-onehot_%d-threshold_%d.pkl.gz" % (ntrain, seed, int(onehot), thresh * 100), "wb"), -1)
             pickle.dump(trY, open(dir + "/tr%d-labels-seed_%d-onehot_%d-threshold_%d.pkl.gz" % (ntrain, seed, int(onehot), thresh * 100), "wb"), -1)
             pickle.dump(teX, open(dir + "/te%d-data-seed_%d-onehot_%d-threshold_%d.pkl.gz" % (ntest, seed, int(onehot), thresh * 100), "wb"), -1)
             pickle.dump(teY, open(dir + "/te%d-labels-seed_%d-onehot_%d-threshold_%d.pkl.gz" % (ntest, seed, int(onehot), thresh * 100), "wb"), -1)
-            print "saving done"
+            print("saving done")
 
     number_of_classes = len(set(labels))
 
-    print len(trX)
-    print len(teX)
+    print(len(trX))
+    print(len(teX))
 
     if onehot:
         trY = one_hot(trY, number_of_classes)
@@ -603,7 +603,7 @@ def load_from_file(filename):
         # save data
         with gzip.open(filename, 'wb') as file:
             csv_file = csv.writer(file, delimiter='\t', quotechar='\'')
-            for oid, seq in data.iteritems():
+            for oid, seq in data.items():
                 oid = int(oid)
                 unique_nucleotides += list({''.join([x for x in seq])})
                 taxonomy_part = tax[oid]
@@ -620,6 +620,6 @@ if __name__ == "__main__":
 
     format_str = "{:11}\t{:80}\t{:7}"
 
-    print format_str.format("genome_id", "classification", "sequence_length")
-    for key, val in tax.iteritems():
-        print format_str.format(key, val, len(data[key]))
+    print(format_str.format("genome_id", "classification", "sequence_length"))
+    for key, val in tax.items():
+        print(format_str.format(key, val, len(data[key])))

@@ -1,6 +1,6 @@
 import unittest
-from load import *
-import load_ncbi
+from .load import *
+from . import load_ncbi
 import numpy as np
 
 

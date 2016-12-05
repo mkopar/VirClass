@@ -4,8 +4,8 @@ import random
 import time
 from keras.models import Sequential
 from keras.layers import Dense, MaxPooling1D, Activation, Convolution1D, Flatten, Dropout
-from load_ncbi import get_gids
-from load import load_data
+from .load_ncbi import get_gids
+from .load import load_data
 
 
 def load_datasets_from_file(filename, debug=False, read_size=100):
@@ -110,7 +110,7 @@ def init_keras(input_shape, p_drop_conv, p_drop_hidden, number_of_classes, conv_
 
 
 if __name__ == "__main__":
-    print "start:", time.strftime('%X %x %Z')
+    print("start:", time.strftime('%X %x %Z'))
     # start = int(time.gmtime(0))
 
     # arguments - filename, debug, input length
@@ -128,11 +128,11 @@ if __name__ == "__main__":
 
     trX, teX, trY, teY, trteX, trteY, num_of_classes, train_class_sizes = load_datasets_from_file(filename, debug=debug, read_size=read_size)
 
-    print(trX.shape)
+    print((trX.shape))
     input_len = trX.shape[1]
-    # trX = trX.reshape(-1, 1, 1, input_len)
-    # teX = teX.reshape(-1, 1, 1, input_len)
-    # trteX = trteX.reshape(-1, 1, 1, input_len)
+    trX = trX.reshape(-1, 1, input_len)
+    teX = teX.reshape(-1, 1, input_len)
+    trteX = trteX.reshape(-1, 1, input_len)
 
     # params for model and cascade initialization
     conv1_stride = 4
@@ -189,5 +189,5 @@ if __name__ == "__main__":
     # params.append(conv_params)
     # save_model("models/best_model_with_params-%d.pkl" % int(time.time()), params)
 
-    print "stop:", time.strftime('%X %x %Z')
+    print("stop:", time.strftime('%X %x %Z'))
     #print "elapsed: ", (int(time.gmtime(0)) - start)

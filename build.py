@@ -2,17 +2,17 @@ import argparse
 import hashlib
 import random
 import time
-import cPickle
+import pickle
 import numpy as np
 import sys
 import theano
 from theano import tensor as T
 from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
-from load import load_data
 from theano.tensor.nnet.conv import conv2d
 from theano.tensor.signal.downsample import max_pool_2d
 from theano.tensor.signal.downsample import DownsampleFactorMax
-from load_ncbi import get_gids
+from .load_ncbi import get_gids
+from .load import load_data
 
 theano.config.floatX='float32'
 
@@ -118,9 +118,9 @@ def save_model(filename, model):
     :return: None
     """
     f = open(filename, 'wb')
-    cPickle.dump(model, f, protocol=cPickle.HIGHEST_PROTOCOL)
+    pickle.dump(model, f, protocol=pickle.HIGHEST_PROTOCOL)
     f.close()
-    print "Model saved as: " + filename
+    print("Model saved as: " + filename)
 
 def load_datasets_from_file(filename, debug=False, read_size=100):
     """
@@ -178,13 +178,13 @@ def init_net(num_of_classes, input_len, conv_params):
     w2 = init_weights((num_filters_2, num_filters_1, 1, cwin2)) # second convolution, 64 filters, stack size 32 (one stack for each filter from previous layer), 1 row, cwin2 columns
     w3 = init_weights((num_filters_3, num_filters_2, 1, cwin3)) # third convolution, 128 filters, stack size 64 (one stack for each filter from previous layes), 1 row, cwin3 columns
 
-    print "#### CONVOLUTION PARAMETERS ####"
-    print "cwin1 %d" % cwin1
-    print "cwin2 %d" % cwin2
-    print "cwin3 %d" % cwin3
-    print "num_filters_1 %d" % num_filters_1
-    print "num_filters_2 %d" % num_filters_2
-    print "num_filters_3 %d" % num_filters_3
+    print("#### CONVOLUTION PARAMETERS ####")
+    print("cwin1 %d" % cwin1)
+    print("cwin2 %d" % cwin2)
+    print("cwin3 %d" % cwin3)
+    print("num_filters_1 %d" % num_filters_1)
+    print("num_filters_2 %d" % num_filters_2)
+    print("num_filters_3 %d" % num_filters_3)
 
     # convolution: filters are moved by one position at a time, see parameter subsample=(1, 1)
     #
@@ -198,24 +198,24 @@ def init_net(num_of_classes, input_len, conv_params):
     es = es / conv1_stride
     # l1 max_pool:
     es = DownsampleFactorMax.out_shape((1, es), (1, downscale1), st=(1, stride1))[1] # downscale for first layer
-    print "l1 es:", es
+    print("l1 es:", es)
 
     # l2 conv:
     es = (es - cwin2 + 1)
     # l2 max_pool:
     es = DownsampleFactorMax.out_shape((1, es), (1, downscale2), st=(1, stride2))[1] # downscale for second layer
-    print "l2 es:", es
+    print("l2 es:", es)
 
     # l3 conv:
     es = (es - cwin3 + 1)
     # l3 max_pool:
     es = DownsampleFactorMax.out_shape((1, es), (1, downscale3), st=(1, stride3))[1] # downscale for third layer
-    print "l3 es:", es
+    print("l3 es:", es)
 
     # downscaling is performed so that we correctly set number of filters in last layer
 
-    w4 = init_weights((num_filters_3 * es, 500))  # fully conected last layer, connects the outputs of 128 filters to 500 (arbitrary) hidden nodes, which are then connected to the output nodes
-    w_o = init_weights((500, num_of_classes))  # number of exptected classes
+    w4 = init_weights((num_filters_3 * es, 500))  # fully connected last layer, connects the outputs of 128 filters to 500 (arbitrary) hidden nodes, which are then connected to the output nodes
+    w_o = init_weights((500, num_of_classes))  # number of expected classes
 
     # matrix types
     X = T.ftensor4()
@@ -232,7 +232,7 @@ def init_net(num_of_classes, input_len, conv_params):
     return params, X, Y, cost, updates, y_x
 
 if __name__ == "__main__":
-    print "start:", time.strftime('%X %x %Z')
+    print("start:", time.strftime('%X %x %Z'))
     # start = int(time.gmtime(0))
 
     # arguments - filename, debug, input length
@@ -249,7 +249,7 @@ if __name__ == "__main__":
 
     trX, teX, trY, teY, trteX, trteY, num_of_classes, train_class_sizes = load_datasets_from_file(filename, debug=debug, read_size=read_size)
 
-    print(trX.shape)
+    print((trX.shape))
     input_len = trX.shape[1]
     trX = trX.reshape(-1, 1, 1, input_len)
     teX = teX.reshape(-1, 1, 1, input_len)
@@ -276,11 +276,11 @@ if __name__ == "__main__":
     count_best = 10
     iter = 100
     for i in range(iter):
-        for start, end in zip(range(0, len(trX), 128), range(128, len(trX), 128)):
+        for start, end in zip(list(range(0, len(trX), 128)), list(range(128, len(trX), 128))):
             cost = train(trX[start:end], trY[start:end])
         # evaluate model on train_test data, not on test data!
         curr_score = (np.mean(np.argmax(trteY, axis=1) == predict(trteX)))
-        print "%.5f" % curr_score
+        print("%.5f" % curr_score)
         if count_best == 0:
             break
         elif curr_score > (best_score + epsilon):
@@ -294,5 +294,5 @@ if __name__ == "__main__":
     params.append(conv_params)
     save_model("models/best_model_with_params-%d.pkl" % int(time.time()), params)
 
-    print "stop:", time.strftime('%X %x %Z')
+    print("stop:", time.strftime('%X %x %Z'))
     #print "elapsed: ", (int(time.gmtime(0)) - start)
