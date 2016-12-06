@@ -47,6 +47,7 @@ setup(
         'biopython',
         'Keras',
         'sklearn',
+        'matplotlib',
         #'sphinx>=1.4',
     },
     extras_require={
