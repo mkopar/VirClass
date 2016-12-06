@@ -43,7 +43,9 @@ setup(
         'numpy',
         'scipy',
         'numpydoc',
-        'numpy'
+        'numpy',
+        'biopython',
+        'Keras'
         #'sphinx>=1.4',
     },
     extras_require={

@@ -36,8 +36,7 @@ install:
     - pip install Keras
     # install apt packages
     - sudo apt-get update
-    - sudo apt-get install python-dev g++ libblas-dev liblapack-dev
-    - sudo apt-get install gfortran libblas-dev liblapack-dev
+    - sudo apt-get install python-dev g++ libblas-dev liblapack-dev gfortran python-biopython
 
 matrix:
   include:
