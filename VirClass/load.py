@@ -5,15 +5,15 @@ import os
 import pickle
 import random
 import math
+import sys
+import numpy as np
+import matplotlib.pyplot as plt
+import pylab as P
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
-import numpy as np
-import sys
 from sklearn import cross_validation
 from .load_ncbi import run, load_seqs_from_ncbi, get_rec
-import matplotlib.pyplot as plt
-import pylab as P
 
 
 def one_hot(x, n):

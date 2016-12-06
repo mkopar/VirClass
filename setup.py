@@ -45,7 +45,8 @@ setup(
         'numpydoc',
         'numpy',
         'biopython',
-        'Keras'
+        'Keras',
+        'sklearn',
         #'sphinx>=1.4',
     },
     extras_require={

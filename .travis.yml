@@ -34,6 +34,7 @@ install:
     - pip install scipy
     - pip install biopython
     - pip install Keras
+    - pip install sklearn
     # install apt packages
     - sudo apt-get update
     - sudo apt-get install python-dev g++ libblas-dev liblapack-dev gfortran python-biopython

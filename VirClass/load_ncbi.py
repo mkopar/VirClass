@@ -1,9 +1,5 @@
-import glob
-import pickle
-
-__author__ = 'Matej'
-
 import os
+import pickle
 from Bio import Entrez
 from Bio import SeqIO
 from collections import defaultdict
