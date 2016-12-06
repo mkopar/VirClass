@@ -1,7 +1,7 @@
 import unittest
-from .load import *
-from . import load_ncbi
 import numpy as np
+
+from VirClass.VirClass.load import one_hot, seq_to_bits
 
 
 class LoadUnitTests(unittest.TestCase):
@@ -12,7 +12,7 @@ class LoadUnitTests(unittest.TestCase):
         x_1 = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0], [1, 0, 0, 0]]).astype(float)
         x_2 = np.array([[1, 0, 0, 0, 0], [0, 1, 0, 0, 0], [0, 0, 0, 1, 0], [0, 0, 1, 0, 0], [1, 0, 0, 0, 0]]).astype(float)
         number_of_classes = max(x) + 1
-        self.assertRaisesRegexp(AssertionError, "USER ERROR - cannot create numpy array; invalid number of classes", one_hot, x, number_of_classes - 1)
+        self.assertRaisesRegexp(AssertionError, "USER ERROR - cannot create numpy array; number of classes must be bigger than max number of list", one_hot, x, number_of_classes - 1)
         np.testing.assert_array_equal(one_hot(x, number_of_classes), x_1)
         np.testing.assert_array_equal(one_hot(x, number_of_classes + 1), x_2)
         np.testing.assert_array_equal(one_hot(np.array(x), number_of_classes), x_1)

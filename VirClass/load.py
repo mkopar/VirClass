@@ -35,7 +35,7 @@ def one_hot(x, n):
     :param n: number of classes
     :return: Y matrix in binary representation
     """
-    if np.max(x) > n:
+    if np.max(x) >= n:
         raise AssertionError("USER ERROR - cannot create numpy array; number of classes must be bigger than max number of list")
     if type(x) == list:
         x = np.array(x)
