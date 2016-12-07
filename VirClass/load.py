@@ -1,6 +1,4 @@
-"""
-Module for building new datasets or reading it from files. Upper layer of data (sequence) management.
-"""
+"""Module for building new datasets or reading it from files. Upper layer of data (sequence) management."""
 # pylint: disable=too-many-arguments, too-many-locals
 import gzip
 import math
@@ -24,6 +22,8 @@ MEDIA_DIR = "media/"
 
 def one_hot(x, n):
     """
+    Get matrix that return true vector classes.
+
     Get true classes (Y) and number of classes and return Y matrix in binary representation.
     From vector x, we get matrix of sizes [x.length, n].
         Example: We have 5 different classes (0, 1, 2, 3, 4) and vector x = [0, 0, 1, 2, 2, 3, 4].
@@ -54,6 +54,8 @@ def one_hot(x, n):
 
 def seq_to_bits(vec, unique_nucleotides=None, trans_dict=None):
     """
+    Transform sequences to numbers.
+
     Get sequence and transform it into number representation. Given parameters set some rules in representation.
     :param vec: sequence to transform
     :param unique_nucleotides: number of unique nucleotides in loaded files - mandatory if transmission_dict is None
@@ -77,7 +79,6 @@ def seq_to_bits(vec, unique_nucleotides=None, trans_dict=None):
                               will get value [1, 1, 1, 1] so it won't have much influence on prediction.
     :return: number representation of vec
     """
-
     if trans_dict is None:
         if unique_nucleotides is None:
             raise AssertionError("USER ERROR - number of unique nucleotides and transmission dictionary not present.")
@@ -98,7 +99,9 @@ def seq_to_bits(vec, unique_nucleotides=None, trans_dict=None):
 
 
 def histogram(values, name):
-    """Draw histogram for given values and save it with given name.
+    """
+    Draw histogram for given values and save it with given name.
+
     :param values: values to show in histogram
     :param name: name for saving figure
     """
@@ -114,6 +117,8 @@ def histogram(values, name):
 
 def load_from_file_fasta(filename, depth=4, taxonomy_el_count=-1):
     """
+    Load data from fasta file to a given depth and with given number of elements.
+
     Load data from filename. Default value for depth is 4 - this is depth in classification.
 
         For example, if we have:
@@ -140,7 +145,6 @@ def load_from_file_fasta(filename, depth=4, taxonomy_el_count=-1):
     :param taxonomy_el_count: how many elements we want in taxonomy; -1 means whole taxonomy
     :return: data and tax - data represents sequences, taxonomy represents classification (for each genome ID)
     """
-
     temp_data = defaultdict(list)
     temp_tax = {}
 
@@ -173,6 +177,7 @@ def load_from_file_fasta(filename, depth=4, taxonomy_el_count=-1):
 def dataset_from_id(temp_data, temp_tax, ids, read_size, sample, trans_dict):
     """
     Build dataset from given IDs list and other params.
+
     :param temp_data: whole dataset dictionary
     :param temp_tax: whole taxonomy dictionary
     :param ids: IDs for building dataset of them
@@ -199,6 +204,7 @@ def dataset_from_id(temp_data, temp_tax, ids, read_size, sample, trans_dict):
 def load_dataset(filename):
     """
     Return object from filename. Filename must include directory.
+
     :param filename: dir + filename
     :return: object
     """
@@ -209,6 +215,7 @@ def load_dataset(filename):
 def save_dataset(filename, obj):
     """
     Save dataset to given filename. Filename must include directory.
+
     :param filename: dir + filename
     :param obj: object you want to save
     :return: None
@@ -220,6 +227,8 @@ def save_dataset(filename, obj):
 
 def build_dataset_ids(oids, test, seed):
     """
+    Build splitted dataset_ids from all ids.
+
     In this function we build datasets ids from NCBI database.
     With sklearn function LabelShuffleSplit we split whole dataset into train and test set. When built, test and train
     datasets are saved for later use.
@@ -233,7 +242,6 @@ def build_dataset_ids(oids, test, seed):
     :param seed: random seed for replicating experiments
     :return: dictionary with all split ids for every dataset
     """
-
     datasets_ids = {"tr_ids": [], "te_ids": [], "trtr_ids": [], "trte_ids": []}
 
     ss = cross_validation.LabelShuffleSplit(oids, n_iter=1, test_size=test, random_state=seed)
@@ -258,6 +266,8 @@ def build_dataset_ids(oids, test, seed):
 
 def classes_to_numerical(temp_data, labels):
     """
+    Represent classes in numbers.
+
     From sequence data and taxonomic labels create two dictionaries:
         - one with numeric representation of each label
         - one with each class size
@@ -287,6 +297,8 @@ def classes_to_numerical(temp_data, labels):
 def load_data(filename, test=0.2, trans_dict=None, depth=4, sample=0.2, read_size=100, onehot=True,
               seed=random.randint(0, sys.maxsize), taxonomy_el_count=-1):
     """
+    Load data from filename prefix or build new data and save to file.
+
     Main function for loading data. We expect that fasta files with data are in media directory - if the file with
     given filename does not exist, we build a new one from NCBI database.
     With function build_dataset_ids we split ids for each dataset. Then we build numeric taxonomy representation.
@@ -301,7 +313,6 @@ def load_data(filename, test=0.2, trans_dict=None, depth=4, sample=0.2, read_siz
     :param taxonomy_el_count: how many elements we want in taxonomy; -1 means whole taxonomy
     :return: train and test datasets as numpy arrays
     """
-
     assert test < 1.0 and sample < 1.0
 
     # load data from fasta file - we need it here because of num_of_classes - we only can get this from labels/data dict

@@ -1,6 +1,4 @@
-"""
-Build neural net architecture with keras library and save best model.
-"""
+"""Build neural net architecture with keras library and save best model."""
 
 import argparse
 import hashlib
@@ -14,6 +12,8 @@ from .load import load_data
 
 def load_data_sets_from_file(data_set_filename, debug_mode=False, input_length=100):
     """
+    Load datasets from given filename.
+
     Function for loading data set before initializing neural network and evaluating the model.
     If you get/build data set in fasta format beforehand, provide filename in argument when calling build.py. We expect
     provided filename is located in media directory.
@@ -49,13 +49,15 @@ def load_data_sets_from_file(data_set_filename, debug_mode=False, input_length=1
 
 def init_keras(train_input_shape, p_drop_conv, p_drop_hidden, number_of_classes, convolution_params=None):
     """
-        Perform convolution and everything belonging to it.
-        Code is split into 4 "blocks" - 3 blocks of computation and last block where we have fully connected layer.
+    Initialize keras neural net.
 
-        In each block we perform convolution, followed by rectify activation function. After that we perform max pool
-        and add some noise with dropout. This is repeated for layers 2 and 3.
-        Last layer is fully connected layer, which connects all the filters to 500 hidden nodes. These nodes are then
-        connected to the output nodes.
+    Perform convolution and everything belonging to it.
+    Code is split into 4 "blocks" - 3 blocks of computation and last block where we have fully connected layer.
+
+    In each block we perform convolution, followed by rectify activation function. After that we perform max pool
+    and add some noise with dropout. This is repeated for layers 2 and 3.
+    Last layer is fully connected layer, which connects all the filters to 500 hidden nodes. These nodes are then
+    connected to the output nodes.
     """
     if convolution_params is not None:
         convolution1_stride = convolution_params[0]

@@ -1,4 +1,5 @@
 # pylint: disable=missing-docstring, protected-access
+# pydocstyle: disable=missing-docstring
 import unittest
 import numpy as np
 
