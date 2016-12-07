@@ -5,10 +5,11 @@ Module for preparing data from NCBI. Most low layer module for manipulating data
 import os
 import pickle
 from collections import defaultdict
+
 from Bio import Entrez
 from Bio import SeqIO
 
-# TODO: move to init
+# move to init
 cache_dir = "../Diploma/cache"
 if not os.path.isdir(cache_dir):
     cache_dir = "cache"
@@ -39,13 +40,13 @@ def get_rec(rec_id):
     :return: record
     """
     try:
-        rec = pickle.load(open(cache_dir + "/%s.pkl.gz" % rec_id, "rb"))
+        rec = pickle.load(open(os.path.join(cache_dir, "/%s.pkl.gz" % rec_id), "rb"))
     except IOError:  # , FileNotFoundError:
         print(("downloading sequence id:", rec_id))
         handle = Entrez.efetch(db="nucleotide", rettype="gb", id=rec_id)
         rec = SeqIO.read(handle, "gb")
         handle.close()
-        pickle.dump(rec, open(cache_dir + "/%s.pkl.gz" % rec_id, "wb"), -1)
+        pickle.dump(rec, open(os.path.join(cache_dir, "/%s.pkl.gz" % rec_id), "wb"), -1)
         print(("genome size:", len(rec.seq), rec.seq[:20] + "..."))
         print(("Taxonomy:", rec.annotations['taxonomy']))
         for a, t in list(rec.annotations.items()):
@@ -214,9 +215,19 @@ def get_taxonomy(id_list, count=-1):
                     if temp_count == count:
                         break
                     temp_count += 1
-        except Exception as e:
-            print("problems...")
+        except IOError as e:
+            # efetch - Raises an IOError exception if there's a network error.
+            # http://biopython.org/DIST/docs/api/Bio.Entrez-module.html
+            print("problems in network connection...")
             print(e)
+        except ValueError as v:
+            # http: // biopython.org / DIST / docs / api / Bio.SeqIO - module.html  # read
+            print("problems with handling SeqIO...")
+            print(v)
+        except pickle.PicklingError as p:
+            # https://docs.python.org/2/library/pickle.html#pickle.PicklingError
+            print("problems with pickling object...")
+            print(p)
 
     return temp_taxonomy
 

@@ -1,7 +1,7 @@
 """
 Module for building new datasets or reading it from files. Upper layer of data (sequence) management.
 """
-
+# pylint: disable=too-many-arguments, too-many-locals
 import gzip
 import math
 import os
@@ -170,21 +170,19 @@ def load_from_file_fasta(filename, depth=4, taxonomy_el_count=-1):
     return temp_data, temp_tax
 
 
-def dataset_from_id(temp_data, temp_tax, ids, seq_params):
+def dataset_from_id(temp_data, temp_tax, ids, read_size, sample, trans_dict):
     """
     Build dataset from given IDs list and other params.
     :param temp_data: whole dataset dictionary
     :param temp_tax: whole taxonomy dictionary
     :param ids: IDs for building dataset of them
-    :param seq_params: parameters for sequence handling
-                        - read_size: size of reads you want to generate
-                        - sample: how many data you want to skip - 20% means that every fifth read will be included
-                        - trans_dict: dictionary of transmission
+    :param read_size: size of reads you want to generate
+    :param sample: how many data you want to skip - 20% means that every fifth read will be included
+    :param trans_dict: dictionary of transmission
     :return: build dataset with numeric sequences and classes
     """
     tempX = []
     tempY = []
-    read_size, sample, trans_dict = seq_params
     for te_id in ids:
         seq = temp_data[te_id]
         while seq:
@@ -220,10 +218,9 @@ def save_dataset(filename, obj):
     print("Successfully saved as: " + filename)
 
 
-def build_dataset(filename, oids, test, seed, read_size, temp_data, temp_tax, trans_dict, sample):
+def build_dataset_ids(oids, test, seed):
     """
-    In this function we build new datasets from NCBI database.
-    Then we build numeric taxonomy representation.
+    In this function we build datasets ids from NCBI database.
     With sklearn function LabelShuffleSplit we split whole dataset into train and test set. When built, test and train
     datasets are saved for later use.
     We want to evaluate our model only with train data, so we split train data into two parts
@@ -231,87 +228,60 @@ def build_dataset(filename, oids, test, seed, read_size, temp_data, temp_tax, tr
     are going to train our model ONLY on this data). With files trte_ we are going to evaluate our model for saving,
     and with te_ files we are going to actually predict final classes.
     The params helps you set some rules for building the data you want.
-    :param filename: dataset filename (which MUST be in media directory, otherwise new will be built)
-    :param oids:
+    :param oids: TODO
     :param test: test size in percentage of whole dataset
-    :param trans_dict: dictionary for transforming nucleotides to bits (seq_to_bits function)
-    :param sample: sampling size - 20% means that every fifth read is included into dataset
-    :param read_size: chunk size
-    :param temp_data:
-    :param temp_tax:
     :param seed: random seed for replicating experiments
-    :return: train and test datasets as numpy arrays
+    :return: dictionary with all split ids for every dataset
     """
-    trX = []
-    trY = []
-    teX = []
-    teY = []
-    trteX = []
-    trteY = []
+
+    datasets_ids = {"tr_ids": [], "te_ids": [], "trtr_ids": [], "trte_ids": []}
 
     ss = cross_validation.LabelShuffleSplit(oids, n_iter=1, test_size=test, random_state=seed)
     for train_index, test_index in ss:
         # we split ids to train and test
-        tr_ids = list(oids[i] for i in train_index)
-        te_ids = list(oids[i] for i in test_index)
+        datasets_ids["tr_ids"] = list(oids[i] for i in train_index)
+        datasets_ids["te_ids"] = list(oids[i] for i in test_index)
 
         # intersection of train and test must be empty set
-        assert set(tr_ids).intersection(set(te_ids)) == set()
+        assert set(datasets_ids["tr_ids"]).intersection(set(datasets_ids["te_ids"])) == set()
 
         # get train test IDs for evaluating model
         # hardcode test_size for train evaluation
+        tr_ids = datasets_ids["tr_ids"]
         ss_tr = cross_validation.LabelShuffleSplit(tr_ids, n_iter=1, test_size=0.2, random_state=seed)
         for train_train_index, train_test_index in ss_tr:
-            trtr_ids = list(tr_ids[i] for i in train_train_index)
-            trte_ids = list(tr_ids[i] for i in train_test_index)
+            datasets_ids["trtr_ids"] = list(tr_ids[i] for i in train_train_index)
+            datasets_ids["trte_ids"] = list(tr_ids[i] for i in train_test_index)
 
-        # use only "sample" percent of data
-        for tr_id in tr_ids:
-            seq = temp_data[tr_id]
-            while seq:
-                if len(seq) < read_size:
-                    break
-                if tr_id in trte_ids:
-                    trteX.append(seq_to_bits(seq[:read_size], trans_dict=trans_dict))
-                    trteY.append(temp_tax[tr_id])
-                elif tr_id in trtr_ids:
-                    trX.append(seq_to_bits(seq[:read_size], trans_dict=trans_dict))
-                    trY.append(temp_tax[tr_id])
-                else:
-                    print(tr_id + " is not in train_index list!")
-                    sys.exit(0)
-                # don't use whole sequence, only every second, third etc (depending on sample percent)
-                # use ceil to avoid decimals
-                seq = seq[int(math.ceil(read_size / sample)):]
+    return datasets_ids
 
-        for te_id in te_ids:
-            seq = temp_data[te_id]
-            while seq:
-                if len(seq) < read_size:
-                    break
-                teX.append(seq_to_bits(seq[:read_size], trans_dict=trans_dict))
-                teY.append(temp_tax[te_id])
-                # don't use whole sequence, only every second, third etc (depending on sample percent)
-                # use ceil to avoid decimals
-                seq = seq[int(math.ceil(read_size / sample)):]
 
-        tmpteX, tmpteY = dataset_from_id(temp_data, temp_tax, te_ids, (read_size, sample, trans_dict))
-        tmptrX, tmptrY = dataset_from_id(temp_data, temp_tax, trtr_ids, (read_size, sample, trans_dict))
-        tmptrteX, tmptrteY = dataset_from_id(temp_data, temp_tax, trte_ids, (read_size, sample, trans_dict))
+def classes_to_numerical(temp_data, labels):
+    """
+    From sequence data and taxonomic labels create two dictionaries:
+        - one with numeric representation of each label
+        - one with each class size
+    :param temp_data: sequence data
+    :param labels: taxonomic labels
+    :return: dictionaries with numeric representation of labels and dictionary with class sizes
+    """
+    # numeric representation of classes and calculating sum of sequence lengths for each class
+    temp_l = []
+    label_num = -1
+    temp_tax = {}
+    class_size = defaultdict(int)
+    for gid, l in labels.items():
+        if l not in temp_l:
+            temp_l.append(l)
+            label_num += 1
+        temp_tax[gid] = label_num
+        print(label_num, len(temp_data[gid]))
+        class_size[label_num] += len(temp_data[gid])
 
-        assert teX == tmpteX and teY == tmpteY
-        assert trX == tmptrX and trY == tmptrY
-        assert trteX == tmptrteX and trteY == tmptrteY
+    for _class, s in class_size.items():
+        class_size[_class] = s / list(temp_tax.values()).count(_class)
 
-        # set filenames for saving like filename-trX, filename-teX...
-        save_dataset(MEDIA_DIR + filename[:filename.index(".fasta.gz")] + "-trX.fasta.gz", trX)
-        save_dataset(MEDIA_DIR + filename[:filename.index(".fasta.gz")] + "-trY.fasta.gz", trY)
-        save_dataset(MEDIA_DIR + filename[:filename.index(".fasta.gz")] + "-teX.fasta.gz", teX)
-        save_dataset(MEDIA_DIR + filename[:filename.index(".fasta.gz")] + "-teY.fasta.gz", teY)
-        save_dataset(MEDIA_DIR + filename[:filename.index(".fasta.gz")] + "-trteX.fasta.gz", trteX)
-        save_dataset(MEDIA_DIR + filename[:filename.index(".fasta.gz")] + "-trteY.fasta.gz", trteY)
-
-        return trX, trY, teX, teY, trteX, trteY
+    return temp_tax, class_size
 
 
 def load_data(filename, test=0.2, trans_dict=None, depth=4, sample=0.2, read_size=100, onehot=True,
@@ -319,6 +289,8 @@ def load_data(filename, test=0.2, trans_dict=None, depth=4, sample=0.2, read_siz
     """
     Main function for loading data. We expect that fasta files with data are in media directory - if the file with
     given filename does not exist, we build a new one from NCBI database.
+    With function build_dataset_ids we split ids for each dataset. Then we build numeric taxonomy representation.
+    After that we save all datasets to files. The params helps you set some rules for building the data you want.
     :param test: test size in percentage of whole dataset
     :param trans_dict: dictionary for transforming nucleotides to bits (seq_to_bits function)
     :param depth: taxonomy tree depth
@@ -336,52 +308,49 @@ def load_data(filename, test=0.2, trans_dict=None, depth=4, sample=0.2, read_siz
     temp_data, labels = load_from_file_fasta(os.path.join(MEDIA_DIR, filename), depth=depth,
                                              taxonomy_el_count=taxonomy_el_count)
 
-    # numeric representation of classes and calculating sum of sequence lengths for each class
-    temp_l = []
-    label_num = -1
-    temp_tax = {}
-    class_size = defaultdict(int)
-    for gid, l in labels.items():
-        if l not in temp_l:
-            temp_l.append(l)
-            label_num += 1
-        temp_tax[gid] = label_num
-        print(label_num, len(temp_data[gid]))
-        class_size[label_num] += len(temp_data[gid])
+    temp_tax, class_size = classes_to_numerical(temp_data, labels)
+    number_of_classes = len(list(class_size.keys()))
 
-    for _class, s in class_size.items():
-        class_size[_class] = s / list(temp_tax.values()).count(_class)
+    dataset = {"trX": [], "trY": [], "teX": [], "teY": [], "trteX": [], "trteY": []}
 
     try:
         # we save files as something.fasta.gz, so we try to open those files - if they don't exist, generate new ones
-        trX = load_dataset(os.path.join(MEDIA_DIR, filename[:filename.index(".fasta.gz")] + "-trX.fasta.gz"))
-        trY = load_dataset(os.path.join(MEDIA_DIR, filename[:filename.index(".fasta.gz")] + "-trY.fasta.gz"))
-        teX = load_dataset(os.path.join(MEDIA_DIR, filename[:filename.index(".fasta.gz")] + "-teX.fasta.gz"))
-        teY = load_dataset(os.path.join(MEDIA_DIR, filename[:filename.index(".fasta.gz")] + "-teY.fasta.gz"))
-        trteX = load_dataset(os.path.join(MEDIA_DIR, filename[:filename.index(".fasta.gz")] + "-trteX.fasta.gz"))
-        trteY = load_dataset(os.path.join(MEDIA_DIR, filename[:filename.index(".fasta.gz")] + "-trteY.fasta.gz"))
+        dataset["trX"] = load_dataset(os.path.join(MEDIA_DIR, filename[:filename.index(".fasta.gz")] + "-trX.fasta.gz"))
+        dataset["trY"] = load_dataset(os.path.join(MEDIA_DIR, filename[:filename.index(".fasta.gz")] + "-trY.fasta.gz"))
+        dataset["teX"] = load_dataset(os.path.join(MEDIA_DIR, filename[:filename.index(".fasta.gz")] + "-teX.fasta.gz"))
+        dataset["teY"] = load_dataset(os.path.join(MEDIA_DIR, filename[:filename.index(".fasta.gz")] + "-teY.fasta.gz"))
+        dataset["trteX"] = load_dataset(os.path.join(MEDIA_DIR,
+                                                     filename[:filename.index(".fasta.gz")] + "-trteX.fasta.gz"))
+        dataset["trteY"] = load_dataset(os.path.join(MEDIA_DIR,
+                                                     filename[:filename.index(".fasta.gz")] + "-trteY.fasta.gz"))
     except IOError:
         # keys must be same
         assert list(temp_data.keys()) == list(labels.keys())
         oids = [x for x in list(labels.keys())]
         # build dataset
-        trX, trY, teX, teY, trteX, trteY = build_dataset(filename=filename, oids=oids, test=test, seed=seed,
-                                                         read_size=read_size, temp_data=temp_data, temp_tax=temp_tax,
-                                                         trans_dict=trans_dict, sample=sample)
-
-    number_of_classes = len(list(class_size.keys()))
+        datasets_ids = build_dataset_ids(oids=oids, test=test, seed=seed)
+        dataset["teX"], dataset["teY"] = dataset_from_id(temp_data, temp_tax, datasets_ids["te_ids"], read_size,
+                                                         sample, trans_dict)
+        dataset["trX"], dataset["trY"] = dataset_from_id(temp_data, temp_tax, datasets_ids["trtr_ids"], read_size,
+                                                         sample, trans_dict)
+        dataset["trteX"], dataset["trteY"] = dataset_from_id(temp_data, temp_tax, datasets_ids["trte_ids"], read_size,
+                                                             sample, trans_dict)
+        # set filenames for saving like filename-trX, filename-teX...
+        save_dataset(MEDIA_DIR + filename[:filename.index(".fasta.gz")] + "-trX.fasta.gz", dataset["trX"])
+        save_dataset(MEDIA_DIR + filename[:filename.index(".fasta.gz")] + "-trY.fasta.gz", dataset["trY"])
+        save_dataset(MEDIA_DIR + filename[:filename.index(".fasta.gz")] + "-teX.fasta.gz", dataset["teX"])
+        save_dataset(MEDIA_DIR + filename[:filename.index(".fasta.gz")] + "-teY.fasta.gz", dataset["teY"])
+        save_dataset(MEDIA_DIR + filename[:filename.index(".fasta.gz")] + "-trteX.fasta.gz", dataset["trteX"])
+        save_dataset(MEDIA_DIR + filename[:filename.index(".fasta.gz")] + "-trteY.fasta.gz", dataset["trteY"])
 
     if onehot:
-        trY = one_hot(trY, number_of_classes)
-        teY = one_hot(teY, number_of_classes)
-        trteY = one_hot(trteY, number_of_classes)
-    else:
-        trY = np.asarray(trY)
-        teY = np.asarray(teY)
-        trteY = np.asarray(trteY)
+        dataset["trY"] = one_hot(dataset["trY"], number_of_classes)
+        dataset["teY"] = one_hot(dataset["teY"], number_of_classes)
+        dataset["trteY"] = one_hot(dataset["trteY"], number_of_classes)
 
-    return np.asarray(trX), np.asarray(teX), np.asarray(trY), np.asarray(teY), np.asarray(trteX), np.asarray(trteY), \
-           number_of_classes, class_size
+    return np.asarray(dataset["trX"]), np.asarray(dataset["teX"]), np.asarray(dataset["trY"]), \
+        np.asarray(dataset["teY"]), np.asarray(dataset["trteX"]), np.asarray(dataset["trteY"]), \
+        number_of_classes, class_size
 
 
 # #### DEPRECATED - used for csv ####
