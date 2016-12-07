@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/mkopar/VirClass.svg?branch=keras)](https://travis-ci.org/mkopar/VirClass)
+[![codecov](https://codecov.io/gh/mkopar/VirClass/branch/keras/graph/badge.svg)](https://codecov.io/gh/mkopar/VirClass)
+
 # Virus Classification
 
 This is a tool for classifying virus samples into virus classes.
