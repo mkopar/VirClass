@@ -29,7 +29,7 @@ language: python
 #     - rm -f $HOME/.cache/pip/log/debug.log
 
 install:
-    - pip install tox numpy scipy biopython Keras sklearn matplotlib
+    - pip install tox numpy scipy biopython Keras sklearn matplotlib pypandoc
     # install apt packages
     - sudo apt-get update
     - sudo apt-get install python-dev g++ libblas-dev liblapack-dev gfortran python-biopython

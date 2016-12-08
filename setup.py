@@ -52,6 +52,7 @@ setup(
         'Keras',
         'sklearn',
         'matplotlib',
+        'pypandoc',
         #'sphinx>=1.4',
     },
     extras_require={
