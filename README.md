@@ -23,7 +23,7 @@ unspecified parts. After the taxonomy tree is built we apply tree level filter -
 cut the tree at the 4th level.
 That means that final classes for classifying are nodes at 4th level
 but data is same as before, just divided into less groups than before.
-If we cut the tree at 2nd level, the tree would look something like that:
+If we'd cut the (sample) tree at 2nd level, the tree would look something like that:
 
 ![alt-text](https://github.com/mkopar/Virus-classification-theano/blob/master/taksonomija_2.png)
 

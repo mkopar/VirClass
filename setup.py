@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import pypandoc
 from os import path
 
 # Use codecs' open for a consistent encoding
@@ -9,8 +10,11 @@ from setuptools import setup, find_packages
 base_dir = path.dirname(path.realpath(__file__))
 
 # Get the long description from the README file
-with open(path.join(base_dir, 'README.md'), encoding='utf-8') as f:
-    long_description = f.read()
+try:
+    long_description = pypandoc.convert('README.md', 'rst')
+except IOError:
+    with open(path.join(base_dir, 'README.md'), encoding='utf-8') as f:
+        long_description = f.read()
 
 # Get package metadata from 'iCount/__about__.py' file
 about = {}
