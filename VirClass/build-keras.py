@@ -39,9 +39,9 @@ def load_data_sets_from_file(data_set_filename, debug_mode=False, input_length=1
         seed = random.randint(0, 4294967295)
         taxonomy_el_count = -1
     if not data_set_filename:
-        data_set_filename = "%s_%d_%.3f_%d_%d_%d_%d%s" % (hashlib.md5(str(sorted(get_gids())).encode('utf-8')).hexdigest(), depth,
-                                                          sample, input_length, one_hot, seed, taxonomy_el_count,
-                                                          ".fasta.gz")
+        data_set_filename = "%s_%d_%.3f_%d_%d_%d_%d%s" % \
+                            (hashlib.md5(str(sorted(get_gids())).encode('utf-8')).hexdigest(), depth, sample,
+                             input_length, one_hot, seed, taxonomy_el_count, ".fasta.gz")
 
     return load_data(filename=data_set_filename, test=test, depth=depth, read_size=input_length,
                      trans_dict=transmission_dict, sample=sample, seed=seed, taxonomy_el_count=taxonomy_el_count)
