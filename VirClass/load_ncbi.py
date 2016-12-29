@@ -7,12 +7,12 @@ from collections import defaultdict
 from Bio import Entrez
 from Bio import SeqIO
 
-# move to init
-cache_dir = "../Diploma/cache"
-if not os.path.isdir(cache_dir):
-    cache_dir = "cache"
-    if not os.path.isdir(cache_dir):
-        os.makedirs(cache_dir)
+# TODO: move to init
+CACHE_DIR = "../../Diploma/cache"
+if not os.path.isdir(CACHE_DIR):
+    CACHE_DIR = "cache/"
+    if not os.path.isdir(CACHE_DIR):
+        os.makedirs(CACHE_DIR)
 
 
 # ************  NCBI RECORD OPERATIONS  ************ #
@@ -40,13 +40,13 @@ def get_rec(rec_id):
     :return: record
     """
     try:
-        rec = pickle.load(open(os.path.join(cache_dir, "/%s.pkl.gz" % rec_id), "rb"))
+        rec = pickle.load(open(os.path.join(CACHE_DIR, "%s.pkl.gz" % rec_id), "rb"))
     except IOError:  # , FileNotFoundError:
         print(("downloading sequence id:", rec_id))
         handle = Entrez.efetch(db="nucleotide", rettype="gb", id=rec_id)
         rec = SeqIO.read(handle, "gb")
         handle.close()
-        pickle.dump(rec, open(os.path.join(cache_dir, "/%s.pkl.gz" % rec_id), "wb"), -1)
+        pickle.dump(rec, open(os.path.join(CACHE_DIR, "%s.pkl.gz" % rec_id), "wb"), -1)
         print(("genome size:", len(rec.seq), rec.seq[:20] + "..."))
         print(("Taxonomy:", rec.annotations['taxonomy']))
         for a, t in list(rec.annotations.items()):
@@ -224,7 +224,7 @@ def get_taxonomy(id_list, count=-1):
         except IOError as e:
             # efetch - Raises an IOError exception if there's a network error.
             # http://biopython.org/DIST/docs/api/Bio.Entrez-module.html
-            print("problems in network connection...")
+            print("IOError raised...")
             print(e)
         except ValueError as v:
             # http: // biopython.org / DIST / docs / api / Bio.SeqIO - module.html  # read

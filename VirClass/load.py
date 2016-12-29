@@ -160,10 +160,12 @@ def load_from_file_fasta(filename, depth=4, taxonomy_el_count=-1):
                 temp_data[oid] = seq
                 temp_tax[oid] = classification
     except AssertionError:
+        # TODO: move to save_to_file_fasta
         temp_data, temp_tax = load_seqs_from_ncbi(seq_len=-1, skip_read=0, overlap=0,
                                                   taxonomy_el_count=taxonomy_el_count)
         # save data
-        with gzip.open(filename, "w") as file:
+        # with gzip.open(filename, "wt") as file:
+        with gzip.open("sample.fasta.gz", "wt") as file:
             print("writing...")
             for oid, seq in temp_data.items():
                 temp_tax[oid] = ';'.join(temp_tax[oid].split(";")[:depth])
@@ -303,6 +305,7 @@ def load_data(filename, test=0.2, trans_dict=None, depth=4, sample=0.2, read_siz
     given filename does not exist, we build a new one from NCBI database.
     With function build_dataset_ids we split ids for each dataset. Then we build numeric taxonomy representation.
     After that we save all datasets to files. The params helps you set some rules for building the data you want.
+    :param filename: name of the file from where you want to load data; if it doesn't exist, save to this filename
     :param test: test size in percentage of whole dataset
     :param trans_dict: dictionary for transforming nucleotides to bits (seq_to_bits function)
     :param depth: taxonomy tree depth

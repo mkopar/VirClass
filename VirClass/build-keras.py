@@ -142,14 +142,14 @@ if __name__ == "__main__":
     # stride_3 = 2
     # downscale_3 = 1
     # conv params: ((conv1_stride, stride1, downscale1, filters1), (conv2_stride, stride2, downscale2, filters2), ...)
-    conv_params = ((4, 2, 3, 32), (1, 2, 2, 48), (1, 2, 1, 64))
+    conv_params = ((4 * 16, 2, 3, 32), (12, 2, 2, 48), (8, 2, 1, 64))
     # make dynamic
     # conv_params = [conv1_stride, (stride_1, downscale_1), (stride_2, downscale_2), (stride_3, downscale_3)]
 
     # X = K.ftensor4()
     # Y = K.fmatrix()
 
-    input_shape = trX.shape
+    input_shape = (trX.shape[1], 1)  # (400, 1)
 
     model = init_keras(input_shape, 0.2, 0.5, num_of_classes, conv_params)
     # params, X, Y, cost, updates, y_x = init_net(num_of_classes, input_len, conv_params)
@@ -158,14 +158,16 @@ if __name__ == "__main__":
     # train = theano.function(inputs=[X, Y], outputs=cost, updates=updates, allow_input_downcast=True)
     # predict = theano.function(inputs=[X], outputs=y_x, allow_input_downcast=True)
 
-    trX = trX.reshape(1, -1, input_len)
-    teX = teX.reshape(1, -1, input_len)
-    trteX = trteX.reshape(1, -1, input_len)
+    # trX = trX.reshape(1, -1, input_len)
+    # teX = teX.reshape(1, -1, input_len)
+    # trteX = trteX.reshape(1, -1, input_len)
 
     model.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['accuracy'])
 
-    model.fit(trX, trY, batch_size=128, nb_epoch=len(trX) / 128, verbose=1)
+    trX_reshaped = trX.reshape(trX.shape + (1,))
+    model.fit(trX_reshaped, trY, batch_size=128, nb_epoch=int(len(trX) / 128), verbose=1)
     # error here - wrong input shape
+    trteX_reshaped = trteX.reshape(trteX.shape + (1,))
     model.evaluate(trteX, trteY, 128, verbose=1)
 
     model.save("model.h5")
