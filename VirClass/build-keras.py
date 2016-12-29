@@ -166,9 +166,9 @@ if __name__ == "__main__":
 
     trX_reshaped = trX.reshape(trX.shape + (1,))
     model.fit(trX_reshaped, trY, batch_size=128, nb_epoch=int(len(trX) / 128), verbose=1)
-    # error here - wrong input shape
+
     trteX_reshaped = trteX.reshape(trteX.shape + (1,))
-    model.evaluate(trteX, trteY, 128, verbose=1)
+    model.evaluate(trteX_reshaped, trteY, 128, verbose=1)
 
     model.save("model.h5")
 
