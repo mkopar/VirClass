@@ -15,7 +15,7 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from sklearn import cross_validation
-from .load_ncbi import load_seqs_from_ncbi
+from VirClass.VirClass.load_ncbi import load_seqs_from_ncbi
 
 MEDIA_DIR = "media/"
 
@@ -150,7 +150,7 @@ def load_from_file_fasta(filename, depth=4, taxonomy_el_count=-1):
 
     try:
         assert os.path.isfile(filename)
-        with gzip.open(filename, "r") as file:
+        with gzip.open(filename, "rt") as file:
             # read data
             print("reading...")
             for seq_record in SeqIO.parse(file, "fasta"):
@@ -164,8 +164,8 @@ def load_from_file_fasta(filename, depth=4, taxonomy_el_count=-1):
         temp_data, temp_tax = load_seqs_from_ncbi(seq_len=-1, skip_read=0, overlap=0,
                                                   taxonomy_el_count=taxonomy_el_count)
         # save data
-        # with gzip.open(filename, "wt") as file:
-        with gzip.open("sample.fasta.gz", "wt") as file:
+        # with gzip.open("sample.fasta.gz", "wt") as file:
+        with gzip.open(filename, "wt") as file:
             print("writing...")
             for oid, seq in temp_data.items():
                 temp_tax[oid] = ';'.join(temp_tax[oid].split(";")[:depth])
@@ -188,6 +188,8 @@ def dataset_from_id(temp_data, temp_tax, ids, read_size, sample, trans_dict):
     :param trans_dict: dictionary of transmission
     :return: build dataset with numeric sequences and classes
     """
+    # je to smiselno?
+    assert read_size > sample
     tempX = []
     tempY = []
     for te_id in ids:
@@ -210,7 +212,7 @@ def load_dataset(filename):
     :param filename: dir + filename
     :return: object
     """
-    with gzip.open(filename, "rb") as f:
+    with gzip.open(filename, "rt") as f:
         return pickle.load(f)
 
 
@@ -222,7 +224,7 @@ def save_dataset(filename, obj):
     :param obj: object you want to save
     :return: None
     """
-    with gzip.open(filename, "wb") as f:
+    with gzip.open(filename, "wt") as f:
         pickle.dump(obj, f)
     print("Successfully saved as: " + filename)
 
@@ -240,7 +242,7 @@ def build_dataset_ids(oids, test, seed):
     and with te_ files we are going to actually predict final classes.
     The params helps you set some rules for building the data you want.
     :param oids: TODO
-    :param test: test size in percentage of whole dataset
+    :param test: test size in percentage of whole dataset (smaller than 1.0 or an integer)
     :param seed: random seed for replicating experiments
     :return: dictionary with all split ids for every dataset
     """
@@ -287,7 +289,7 @@ def classes_to_numerical(temp_data, labels):
             temp_l.append(l)
             label_num += 1
         temp_tax[gid] = label_num
-        print(label_num, len(temp_data[gid]))
+        # print(label_num, len(temp_data[gid]))
         class_size[label_num] += len(temp_data[gid])
 
     for _class, s in class_size.items():
@@ -309,13 +311,14 @@ def load_data(filename, test=0.2, trans_dict=None, depth=4, sample=0.2, read_siz
     :param test: test size in percentage of whole dataset
     :param trans_dict: dictionary for transforming nucleotides to bits (seq_to_bits function)
     :param depth: taxonomy tree depth
-    :param sample: sampling size - 20% means that every fifth read is included into dataset
+    :param sample: sampling size - 0.2 means 20% => every fifth read is included into dataset
     :param read_size: chunk size
     :param onehot: binary representation of true classes
     :param seed: random seed for replicating experiments
     :param taxonomy_el_count: how many elements we want in taxonomy; -1 means whole taxonomy
     :return: train and test datasets as numpy arrays
     """
+    # sample < 1.0 ali sample < read_size?
     assert test < 1.0 and sample < 1.0
 
     # load data from fasta file - we need it here because of num_of_classes - we only can get this from labels/data dict
@@ -641,7 +644,9 @@ def load_data(filename, test=0.2, trans_dict=None, depth=4, sample=0.2, read_siz
 
 if __name__ == "__main__":
     transmission_dict = {'A': [1, 0, 0, 0], 'T': [0, 1, 0, 0], 'C': [0, 0, 1, 0], 'G': [0, 0, 0, 1]}
-    data, tax = load_from_file_fasta("test.fasta.gz", depth=4, taxonomy_el_count=10)
+    data, tax = load_from_file_fasta("test2.fasta.gz", depth=4, taxonomy_el_count=10)
+    print(data)
+    print(tax)
 
     format_str = "{:11}\t{:80}\t{:7}"
 

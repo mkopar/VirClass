@@ -83,7 +83,7 @@ def load_oid_seq_classification(ids):
     :param ids: genome IDs
     :return: sequences and taxonomy annotations dictionaries for every genome ID
     """
-    seq = defaultdict()
+    seq = defaultdict(list)
     tax = {}
     for oid in ids:
         rec = get_rec(oid)
@@ -426,6 +426,7 @@ def run(taxonomy_el_count=-1):
 
 
 if __name__ == "__main__":
+    a = load_seqs_from_ncbi(taxonomy_el_count=20)
     taxonomy = get_taxonomy(get_gids())
     print("no of examples after taxonomy was built: %d" % count_examples(taxonomy))
     print("no of list nodes after taxonomy was built: %d" % count_list_nodes(taxonomy))
