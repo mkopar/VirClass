@@ -8,8 +8,6 @@ import random
 import sys
 from collections import defaultdict
 import numpy as np
-import pylab as P
-import matplotlib.pyplot as plt
 
 from Bio import SeqIO
 from Bio.Seq import Seq
@@ -98,21 +96,21 @@ def seq_to_bits(vec, unique_nucleotides=None, trans_dict=None):
     return bits_vector
 
 
-def histogram(values, name):
-    """
-    Draw histogram for given values and save it with given name.
-
-    :param values: values to show in histogram
-    :param name: name for saving figure
-    """
-    print(max(values))
-    bins = np.arange(0, 5000000, 250000)
-    P.hist(values, bins, histtype='bar', rwidth=0.8, log=True)
-    plt.tight_layout()
-    ylims = P.ylim()
-    P.ylim((0.1, ylims[1]))
-    plt.savefig(name)
-    plt.clf()
+# def histogram(values, name):
+#     """
+#     Draw histogram for given values and save it with given name.
+#
+#     :param values: values to show in histogram
+#     :param name: name for saving figure
+#     """
+#     print(max(values))
+#     bins = np.arange(0, 5000000, 250000)
+#     P.hist(values, bins, histtype='bar', rwidth=0.8, log=True)
+#     plt.tight_layout()
+#     ylims = P.ylim()
+#     P.ylim((0.1, ylims[1]))
+#     plt.savefig(name)
+#     plt.clf()
 
 
 def load_from_file_fasta(filename, depth=4, taxonomy_el_count=-1):
@@ -642,14 +640,14 @@ def load_data(filename, test=0.2, trans_dict=None, depth=4, sample=0.2, read_siz
 #     return data, tax, unique_nucleotides
 
 
-if __name__ == "__main__":
-    transmission_dict = {'A': [1, 0, 0, 0], 'T': [0, 1, 0, 0], 'C': [0, 0, 1, 0], 'G': [0, 0, 0, 1]}
-    data, tax = load_from_file_fasta("test2.fasta.gz", depth=4, taxonomy_el_count=10)
-    print(data)
-    print(tax)
-
-    format_str = "{:11}\t{:80}\t{:7}"
-
-    print(format_str.format("genome_id", "classification", "sequence_length"))
-    for key, val in tax.items():
-        print(format_str.format(key, val, len(data[key])))
+# if __name__ == "__main__":
+    # transmission_dict = {'A': [1, 0, 0, 0], 'T': [0, 1, 0, 0], 'C': [0, 0, 1, 0], 'G': [0, 0, 0, 1]}
+    # data, tax = load_from_file_fasta("test2.fasta.gz", depth=4, taxonomy_el_count=10)
+    # print(data)
+    # print(tax)
+    #
+    # format_str = "{:11}\t{:80}\t{:7}"
+    #
+    # print(format_str.format("genome_id", "classification", "sequence_length"))
+    # for key, val in tax.items():
+    #     print(format_str.format(key, val, len(data[key])))
