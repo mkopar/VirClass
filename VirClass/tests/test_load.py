@@ -2,7 +2,7 @@
 # pydocstyle: disable=missing-docstring
 from collections import defaultdict
 from io import StringIO
-from unittest.mock import patch, mock_open, MagicMock, file_spec
+from unittest.mock import patch, mock_open, MagicMock, file_spec, call
 
 import unittest
 import numpy as np
@@ -245,25 +245,25 @@ class LoadUnitTests(unittest.TestCase):
 
         self.assertRaisesRegex(AssertionError, "", load.dataset_from_id, temp_data, temp_tax, ids, 20, 20, dict_1)
 
-    def test_load_dataset(self):
-        # read_data = ''
-        # res_expected = ''
-        # with patch('VirClass.VirClass.load.gzip.open') as mocked_open:
-        #     handle = MagicMock(spec=file_spec)
-        #     handle.__enter__.return_value = StringIO(read_data)
-        #     mocked_open.return_value = handle
-        #     res = load.load_dataset('bla.bla')
-        #     mocked_open.assert_called_once_with('bla.bla', 'rt')
-        #     self.assertEqual(res, res_expected)
-        pass
+    @patch('VirClass.VirClass.load.pickle.load')
+    def test_load_dataset(self, mock_pickle_load):
+        m_file = mock_open()
+        with patch('VirClass.VirClass.load.gzip.open', m_file):
+            load.load_dataset('bla.bla')
+            mock_pickle_load.assert_called_once()
+            self.assertTrue(m_file.called)
+            m_file.assert_called_once_with('bla.bla', 'rt')
 
-    def test_save_dataset(self):
-        pass
+    @patch('VirClass.VirClass.load.pickle.dump')
+    def test_save_dataset(self, mock_pickle_dump):
+        m_file = mock_open()
+        with patch('VirClass.VirClass.load.gzip.open', m_file):
+            load.save_dataset('bla.bla', {'test_key': 'test_val'})
+            mock_pickle_dump.assert_call_once_with({'test_key': 'test_val'})
+            self.assertTrue(m_file.called)
+            m_file.assert_called_once_with('bla.bla', 'wt')
 
     def test_build_dataset_ids(self):
-        # ids = list
-        # test = 0.2
-        # seed = 0
         oids = ['1006610892', '1021076629', '1023464444', '1028356461', '1028356384', '1006160387', '10086561',
                 '1016776533', '1005739119', '10140926', '10313991', '1007626122', '1021076583', '10257473',
                 '1021076642', '1004345262', '1002160105', '1023176908', '1007626112', '1024325226']
