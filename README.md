@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/mkopar/VirClass.svg?branch=keras)](https://travis-ci.org/mkopar/VirClass)
+[![Build Status](https://travis-ci.org/mkopar/VirClass.svg?branch=master)](https://travis-ci.org/mkopar/VirClass)
 [![codecov](https://codecov.io/gh/mkopar/VirClass/branch/master/graph/badge.svg)](https://codecov.io/gh/mkopar/VirClass)
 
 # Virus Classification
