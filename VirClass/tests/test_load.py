@@ -2,7 +2,7 @@
 # pydocstyle: disable=missing-docstring
 from collections import defaultdict
 from io import StringIO
-from unittest.mock import patch, mock_open, MagicMock, file_spec, call
+from unittest.mock import patch, mock_open, MagicMock, file_spec
 
 import unittest
 import numpy as np
