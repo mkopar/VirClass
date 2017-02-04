@@ -1,4 +1,4 @@
-# pylint: disable=missing-docstring, protected-access
+# pylint: disable=missing-docstring, protected-access, unused-argument
 # pydocstyle: disable=missing-docstring
 from collections import defaultdict
 from io import StringIO
@@ -80,7 +80,6 @@ class LoadUnitTests(unittest.TestCase):
     @patch('VirClass.VirClass.load.os.path.isfile')
     @patch('VirClass.VirClass.load.load_seqs_from_ncbi')
     def test_load_from_file_fasta(self, arg1, arg2):
-        # pylint: disable=unused-argument
         load.os.path.isfile.return_value = True
 
         temp = defaultdict(list)
