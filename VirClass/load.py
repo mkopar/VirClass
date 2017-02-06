@@ -186,8 +186,7 @@ def dataset_from_id(temp_data, temp_tax, ids, read_size, sample, trans_dict):
     :param trans_dict: dictionary of transmission
     :return: build dataset with numeric sequences and classes
     """
-    # je to smiselno?
-    assert read_size > sample
+    assert 0.0 < sample <= 1.0
     tempX = []
     tempY = []
     for te_id in ids:
@@ -317,7 +316,14 @@ def load_data(filename, test=0.2, trans_dict=None, depth=4, sample=0.2, read_siz
     :return: train and test datasets as numpy arrays
     """
     # sample < 1.0 ali sample < read_size?
-    assert test < 1.0 and sample < 1.0
+    try:
+        assert 1.0 > test >= 0.0
+    except AssertionError:
+        raise ValueError('Test size is in wrong range - it must be between 0.0 and 1.0.')
+    try:
+        assert 0.0 < sample <= 1.0
+    except AssertionError:
+        raise ValueError('Sampling size is in wrong range - it must be between 0.0 and 1.0.')
 
     # load data from fasta file - we need it here because of num_of_classes - we only can get this from labels/data dict
     temp_data, labels = load_from_file_fasta(os.path.join(MEDIA_DIR, filename), depth=depth,

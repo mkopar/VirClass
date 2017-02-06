@@ -303,21 +303,37 @@ class LoadUnitTests(unittest.TestCase):
 
     def test_classes_to_numerical(self):
         temp = defaultdict(list)
+        temp = defaultdict(list)
         temp['1004345262'] = \
             'TGTTGCGTTAACAACAAACCAACCTCCGACCCAAAACAAAGATGAAAATAAAAGATGCCACCCAAACGCCGACTAGTGGACAGCCCAGAAGATATGGAAGAAA' \
             'GATGCCACCCAAACGCCGACTAGTGGACAGCCCAGAAGATATGGAAGACGAGGGACCCTCTGACCGACCAACTCACCTACCCAAACTCCCAGGAACC'
         temp['10043452'] = \
             'GATGCCACCCAAACGCCGACTAGTGGACAGCCCAGAAGATATGGAAGACGAGGGACCCTCTGACCGACCAACTCACCTACCCAAACTCCCAGGAACC' \
             'TGTTGCGTTAACAACAAACCAACCTCCGACCCAAAACAAAGATGAAAATAAAAGATGCCACCCAAACGCCGACTAGTGGACAGCCCAGAAGATATGGA'
+        temp['1023464444'] = \
+            'AAACACAACAGGGCCTCAAGCCTGTCGCAAAAAGAACAGGTAACAACGACAGGAACGTGGCGGACGAGATACAGACCGGCACGTAAACCCAACCGACAC' \
+            'ATCCAATATGGTACCCCTCATTGAACCACATAACACAACACAGGCCGCAACTCCGAATACGCATGACAATCACCAAGAATGGGCAAGCTCAATCGCAGCACTCATG'
+        temp['1028356461'] = \
+            'CCAATCCCGACCGGAATGGAGGTCCTGACAGGGTACTAAACCCAGTGTAGCGCCCACACGCAATCAGAACAAGACAAAAGCCCCCTAAACCCCACTCCGAAAA' \
+            'GCGGACAAAAATCCAACCTCATACAAACAAACAAGGGCTAGATGCCAACAGGGACTGCCATCCAATGAGAATGTCCATAGGAGTCGAAACAAAGCCA'
+        temp['1028356384'] = \
+            'GAAGCCACCAGAAAGATAAGTGAAACAGTACACGAGCCCTAAACACAACGAATCTTCATAATAACCACCCGACTAAGCGACAAAACCACAGGAACCGACCC' \
+            'AGACGAAAGCACCGACCAGTGATCACAACTCTTTCGAGGTCACACCCGGTACTACGTAAGTGCCACCATCGCAGCTAAGAGGGCACGCA'
 
         labels = {'1004345262':
                   'Viruses;ssRNA viruses;ssRNA negative-strand viruses;Mononegavirales;Bornaviridae;Bornavirus',
-                  '10043452': 'Viruses;ssRNA viruses;ssRNA positive-strand viruses;ViruslesA;ViridaeB;VirusC'}
+                  '10043452': 'Viruses;ssRNA viruses;ssRNA positive-strand viruses;ViralesA;ViridaeB;VirusC',
+                  '1023464444': 'Viruses;ssDNA viruses;ssDNA negative-strand viruses;ViralesA;ViridaeB;VirusC',
+                  '1028356461': 'Viruses;ssDNA viruses;ssDNA negative-strand viruses;ViridaeB;VirusC',
+                  '1028356384': 'Viruses;ssDNA viruses;ssDNA negative-strand viruses;ViridaeB;VirusC'}
 
         res_temp = defaultdict(int)
         res_temp[0] = 195.0
         res_temp[1] = 200.0
-        res_expect = ({'10043452': 0, '1004345262': 1}, res_temp)
+        res_temp[2] = 205.0
+        res_temp[2] = 205.0
+        res_temp[2] = 195.0
+        res_expect = ({'10043452': 0, '1004345262': 1, '1023464444': 2, '1028356461': 3, '1028356384': 4}, res_temp)
 
         res = load.classes_to_numerical(temp, labels)
         self.assertTrue(res, res_expect)
@@ -326,10 +342,69 @@ class LoadUnitTests(unittest.TestCase):
         res = load.classes_to_numerical(defaultdict(list), {})
         self.assertTrue(res, ({}, defaultdict(int)))
 
-    def test_load_data(self):
-        # good luck :)
-        pass
-
+    # @patch('VirClass.VirClass.load.load_from_file_fasta')
+    # @patch('VirClass.VirClass.load.classes_to_numerical')
+    # @patch('VirClass.VirClass.load.build_dataset_ids')
+    # def test_load_data(self, arg1, arg2, arg3):
+    #     self.assertRaisesRegex(ValueError, "Test size is in wrong range - it must be between 0.0 and 1.0.",
+    #                            load.load_data, filename='a.fasta', test=1.0)
+    #     self.assertRaisesRegex(ValueError, "Test size is in wrong range - it must be between 0.0 and 1.0.",
+    #                            load.load_data, filename='a.fasta', test=-1.0)
+    #     self.assertRaisesRegex(ValueError, "Sampling size is in wrong range - it must be between 0.0 and 1.0.",
+    #                            load.load_data, filename='a.fasta', sample=1.0)
+    #     self.assertRaisesRegex(ValueError, "Sampling size is in wrong range - it must be between 0.0 and 1.0.",
+    #                            load.load_data, filename='a.fasta', sample=-1.0)
+    #
+    #     temp = defaultdict(list)
+    #     temp['1004345262'] = \
+    #         'TGTTGCGTTAACAACAAACCAACCTCCGACCCAAAACAAAGATGAAAATAAAAGATGCCACCCAAACGCCGACTAGTGGACAGCCCAGAAGATATGGAAGAAA' \
+    #         'GATGCCACCCAAACGCCGACTAGTGGACAGCCCAGAAGATATGGAAGACGAGGGACCCTCTGACCGACCAACTCACCTACCCAAACTCCCAGGAACC'
+    #     temp['10043452'] = \
+    #         'GATGCCACCCAAACGCCGACTAGTGGACAGCCCAGAAGATATGGAAGACGAGGGACCCTCTGACCGACCAACTCACCTACCCAAACTCCCAGGAACC' \
+    #         'TGTTGCGTTAACAACAAACCAACCTCCGACCCAAAACAAAGATGAAAATAAAAGATGCCACCCAAACGCCGACTAGTGGACAGCCCAGAAGATATGGA'
+    #     temp['1023464444'] = \
+    #         'AAACACAACAGGGCCTCAAGCCTGTCGCAAAAAGAACAGGTAACAACGACAGGAACGTGGCGGACGAGATACAGACCGGCACGTAAACCCAACCGACAC' \
+    #         'ATCCAATATGGTACCCCTCATTGAACCACATAACACAACACAGGCCGCAACTCCGAATACGCATGACAATCACCAAGAATGGGCAAGCTCAATCGCAGCACTCATG'
+    #     temp['1028356461'] = \
+    #         'CCAATCCCGACCGGAATGGAGGTCCTGACAGGGTACTAAACCCAGTGTAGCGCCCACACGCAATCAGAACAAGACAAAAGCCCCCTAAACCCCACTCCGAAAA' \
+    #         'GCGGACAAAAATCCAACCTCATACAAACAAACAAGGGCTAGATGCCAACAGGGACTGCCATCCAATGAGAATGTCCATAGGAGTCGAAACAAAGCCA'
+    #     temp['1028356384'] = \
+    #         'GAAGCCACCAGAAAGATAAGTGAAACAGTACACGAGCCCTAAACACAACGAATCTTCATAATAACCACCCGACTAAGCGACAAAACCACAGGAACCGACCC' \
+    #         'AGACGAAAGCACCGACCAGTGATCACAACTCTTTCGAGGTCACACCCGGTACTACGTAAGTGCCACCATCGCAGCTAAGAGGGCACGCA'
+    #
+    #     labels_assert = {'1004345262':
+    #                      'Viruses;ssRNA viruses;ssRNA negative-strand viruses;Mononegavirales;Bornaviridae;Bornavirus'}
+    #
+    #     load.load_from_file_fasta.return_value = (temp, labels_assert)
+    #
+    #     # mock load_dataset with side effect IOError
+    #     with patch('VirClass.VirClass.load.load_dataset', mock_open(), create=True) as mocked_open:
+    #         mocked_open.side_effect = IOError()
+    #         self.assertRaisesRegex(AssertionError, "", load.load_data, filename='a.fasta')
+    #
+    #     labels = {'1004345262':
+    #               'Viruses;ssRNA viruses;ssRNA negative-strand viruses;Mononegavirales;Bornaviridae;Bornavirus',
+    #               '10043452': 'Viruses;ssRNA viruses;ssRNA positive-strand viruses;ViralesA;ViridaeB;VirusC',
+    #               '1023464444': 'Viruses;ssDNA viruses;ssDNA negative-strand viruses;ViralesA;ViridaeB;VirusC',
+    #               '1028356461': 'Viruses;ssDNA viruses;ssDNA negative-strand viruses;ViridaeB;VirusC',
+    #               '1028356384': 'Viruses;ssDNA viruses;ssDNA negative-strand viruses;ViridaeB;VirusC'}
+    #
+    #     load.load_from_file_fasta.return_value = (temp, labels)
+    #     load.build_dataset_ids.return_value = ['1004345262', '10043452', '1023464444', '1028356461', '1028356384']
+    #     res_temp = defaultdict(int)
+    #     res_temp[0] = 195.0
+    #     res_temp[1] = 200.0
+    #     res_temp[2] = 205.0
+    #     res_temp[2] = 205.0
+    #     res_temp[2] = 195.0
+    #     classes_to_numerical_expected = ({'10043452': 0, '1004345262': 1, '1023464444': 2, '1028356461': 3,
+    #                                       '1028356384': 4}, res_temp)
+    #     load.classes_to_numerical.return_value = classes_to_numerical_expected
+    #     load.build_dataset_ids.return_value = {'tr_ids': ['1004345262', '10043452', '1028356461', '1028356384'],
+    #                                            'te_ids': ['1023464444'],
+    #                                            'trtr_ids': ['10043452', '1028356461', '1004345262'],
+    #                                            'trte_ids': ['1028356384']}
+        # mock load_dataset without side effect
 
 if __name__ == '__main__':
     unittest.main()
