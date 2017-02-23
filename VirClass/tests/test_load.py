@@ -262,7 +262,7 @@ class LoadUnitTests(TestCase):
     @patch('VirClass.VirClass.load.pickle.dump')
     def test_save_dataset(self, mock_pickle_dump):
         m_file = mock_open()
-        with patch('VirClass.VirClass.load.gzip.open', m_file) as mocked_open:
+        with patch('VirClass.VirClass.load.gzip.open', m_file):
             load.save_dataset('bla.bla', {'test_key': 'test_val'})
             mock_pickle_dump.assert_called_once_with({'test_key': 'test_val'}, mock.ANY)
             self.assertTrue(m_file.called)
