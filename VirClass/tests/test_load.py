@@ -4,6 +4,7 @@
 from collections import defaultdict
 from io import StringIO
 from unittest import TestCase, main
+from unittest import mock
 from unittest.mock import patch, mock_open, MagicMock, file_spec
 
 import numpy as np
@@ -254,16 +255,16 @@ class LoadUnitTests(TestCase):
         m_file = mock_open()
         with patch('VirClass.VirClass.load.gzip.open', m_file):
             load.load_dataset('bla.bla')
-            mock_pickle_load.assert_called_once()
+            self.assertEqual(mock_pickle_load.call_count, 1)
             self.assertTrue(m_file.called)
             m_file.assert_called_once_with('bla.bla', 'rt')
 
     @patch('VirClass.VirClass.load.pickle.dump')
     def test_save_dataset(self, mock_pickle_dump):
         m_file = mock_open()
-        with patch('VirClass.VirClass.load.gzip.open', m_file):
+        with patch('VirClass.VirClass.load.gzip.open', m_file) as mocked_open:
             load.save_dataset('bla.bla', {'test_key': 'test_val'})
-            mock_pickle_dump.assert_call_once_with({'test_key': 'test_val'})
+            mock_pickle_dump.assert_called_once_with({'test_key': 'test_val'}, mock.ANY)
             self.assertTrue(m_file.called)
             m_file.assert_called_once_with('bla.bla', 'wt')
 
@@ -325,7 +326,7 @@ class LoadUnitTests(TestCase):
             'AGACGAAAGCACCGACCAGTGATCACAACTCTTTCGAGGTCACACCCGGTACTACGTAAGTGCCACCATCGCAGCTAAGAGGGCACGCA'
 
         labels = {'1004345262':
-                      'Viruses;ssRNA viruses;ssRNA negative-strand viruses;Mononegavirales;Bornaviridae;Bornavirus',
+                  'Viruses;ssRNA viruses;ssRNA negative-strand viruses;Mononegavirales;Bornaviridae;Bornavirus',
                   '10043452': 'Viruses;ssRNA viruses;ssRNA positive-strand viruses;ViralesA;ViridaeB;VirusC',
                   '1023464444': 'Viruses;ssDNA viruses;ssDNA negative-strand viruses;ViralesA;ViridaeB;VirusC',
                   '1028356461': 'Viruses;ssDNA viruses;ssDNA negative-strand viruses;ViridaeB;VirusC',
@@ -497,7 +498,7 @@ class LoadUnitTests(TestCase):
             self.assertTrue(isinstance(res[-2], int))
             for idx, dataset_name in enumerate(['trX', 'teX', 'trY', 'teY', 'trteX', 'trteY']):
                 m_file.assert_any_call('a-' + dataset_name + '.fasta.gz', 'wt')
-                pickle_mock.assert_call_with(dataset_expected[dataset_name])
+                pickle_mock.any_call(dataset_expected[dataset_name], mock.ANY)
                 np.testing.assert_array_equal(res[idx], np.asarray(dataset_expected[dataset_name]))
 
         dataset_mock.side_effect = [(dataset_expected['teX'], dataset_expected['teY']),
@@ -523,7 +524,7 @@ class LoadUnitTests(TestCase):
             self.assertTrue(isinstance(res[-2], int))
             for idx, dataset_name in enumerate(['trX', 'teX', 'trY', 'teY', 'trteX', 'trteY']):
                 m_file.assert_any_call('a-' + dataset_name + '.fasta.gz', 'wt')
-                pickle_mock.assert_call_with(dataset_expected[dataset_name])
+                pickle_mock.any_call(dataset_expected[dataset_name], mock.ANY)
                 np.testing.assert_array_equal(res[idx], np.asarray(dataset_expected[dataset_name]))
 
 
