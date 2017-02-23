@@ -1,15 +1,17 @@
-# pylint: disable=missing-docstring, protected-access, unused-argument
+# pylint: disable=missing-docstring, protected-access, unused-argument, too-many-arguments, too-many-statements
+# pylint: disable=too-many-locals, bad-continuation
 # pydocstyle: disable=missing-docstring
 from collections import defaultdict
 from io import StringIO
+from unittest import TestCase, main
 from unittest.mock import patch, mock_open, MagicMock, file_spec
 
-import unittest
 import numpy as np
+
 import VirClass.VirClass.load as load
 
 
-class LoadUnitTests(unittest.TestCase):
+class LoadUnitTests(TestCase):
     def test_one_hot(self):
         # tests: 1x list, 1x np.array, n < number_of_classes, n = number_of_classes, n > number_of_classes
         x = [0, 1, 3, 2, 0]
@@ -17,8 +19,8 @@ class LoadUnitTests(unittest.TestCase):
         x_2 = np.array([[1, 0, 0, 0, 0], [0, 1, 0, 0, 0], [0, 0, 0, 1, 0], [0, 0, 1, 0, 0],
                         [1, 0, 0, 0, 0]])
         number_of_classes = max(x) + 1
-        self.assertRaisesRegex(AssertionError, "USER ERROR - cannot create numpy array; number of classes must be "
-                                               "bigger than max number of list", load.one_hot, x, number_of_classes - 1)
+        self.assertRaisesRegex(AssertionError, "Cannot create numpy array; number of classes must be bigger than max "
+                                               "number of list.", load.one_hot, x, number_of_classes - 1)
         np.testing.assert_array_equal(load.one_hot(x, number_of_classes), x_1)
         np.testing.assert_array_equal(load.one_hot(x, number_of_classes + 1), x_2)
         np.testing.assert_array_equal(load.one_hot(np.array(x), number_of_classes), x_1)
@@ -51,8 +53,8 @@ class LoadUnitTests(unittest.TestCase):
                        1, 1,
                        1, 1,
                        1, 1]
-        self.assertRaisesRegex(AssertionError, "USER ERROR - number of unique nucleotides and transmission dictionary "
-                                               "not present.", load.seq_to_bits, vec, None, None)
+        self.assertRaisesRegex(AssertionError, "Number of unique nucleotides and transmission dictionary not present.",
+                               load.seq_to_bits, vec, None, None)
         res = load.seq_to_bits(vec, "ATCGYM", None)
         self.assertEqual(res, test_atcgym)
         self.assertEqual(len(res) % 6, 0)  # we have 6 unique nucleotides - len % 6 must be 0
@@ -242,14 +244,17 @@ class LoadUnitTests(unittest.TestCase):
         res = load.dataset_from_id(temp_data, temp_tax, ids, 20, 0.5, dict_1)
         self.assertTrue(res, (expected_x20, expected_y20))
 
-        self.assertRaisesRegex(AssertionError, "", load.dataset_from_id, temp_data, temp_tax, ids, 20, 20, dict_1)
+        self.assertRaisesRegex(AssertionError, "Sampling size is in wrong range - it must be between 0.0 and 1.0.",
+                               load.dataset_from_id, temp_data, temp_tax, ids, 20, 20, dict_1)
+        self.assertRaisesRegex(AssertionError, "Both transmission dictionary and unique nucleotides cannot be empty.",
+                               load.dataset_from_id, temp_data, temp_tax, ids, 20, 0.5, None)
 
     @patch('VirClass.VirClass.load.pickle.load')
     def test_load_dataset(self, mock_pickle_load):
         m_file = mock_open()
         with patch('VirClass.VirClass.load.gzip.open', m_file):
             load.load_dataset('bla.bla')
-            # mock_pickle_load.assert_called_once()
+            mock_pickle_load.assert_called_once()
             self.assertTrue(m_file.called)
             m_file.assert_called_once_with('bla.bla', 'rt')
 
@@ -258,7 +263,7 @@ class LoadUnitTests(unittest.TestCase):
         m_file = mock_open()
         with patch('VirClass.VirClass.load.gzip.open', m_file):
             load.save_dataset('bla.bla', {'test_key': 'test_val'})
-            # mock_pickle_dump.assert_call_once_with({'test_key': 'test_val'})
+            mock_pickle_dump.assert_call_once_with({'test_key': 'test_val'})
             self.assertTrue(m_file.called)
             m_file.assert_called_once_with('bla.bla', 'wt')
 
@@ -303,7 +308,6 @@ class LoadUnitTests(unittest.TestCase):
 
     def test_classes_to_numerical(self):
         temp = defaultdict(list)
-        temp = defaultdict(list)
         temp['1004345262'] = \
             'TGTTGCGTTAACAACAAACCAACCTCCGACCCAAAACAAAGATGAAAATAAAAGATGCCACCCAAACGCCGACTAGTGGACAGCCCAGAAGATATGGAAGAAA' \
             'GATGCCACCCAAACGCCGACTAGTGGACAGCCCAGAAGATATGGAAGACGAGGGACCCTCTGACCGACCAACTCACCTACCCAAACTCCCAGGAACC'
@@ -321,7 +325,7 @@ class LoadUnitTests(unittest.TestCase):
             'AGACGAAAGCACCGACCAGTGATCACAACTCTTTCGAGGTCACACCCGGTACTACGTAAGTGCCACCATCGCAGCTAAGAGGGCACGCA'
 
         labels = {'1004345262':
-                  'Viruses;ssRNA viruses;ssRNA negative-strand viruses;Mononegavirales;Bornaviridae;Bornavirus',
+                      'Viruses;ssRNA viruses;ssRNA negative-strand viruses;Mononegavirales;Bornaviridae;Bornavirus',
                   '10043452': 'Viruses;ssRNA viruses;ssRNA positive-strand viruses;ViralesA;ViridaeB;VirusC',
                   '1023464444': 'Viruses;ssDNA viruses;ssDNA negative-strand viruses;ViralesA;ViridaeB;VirusC',
                   '1028356461': 'Viruses;ssDNA viruses;ssDNA negative-strand viruses;ViridaeB;VirusC',
@@ -342,69 +346,186 @@ class LoadUnitTests(unittest.TestCase):
         res = load.classes_to_numerical(defaultdict(list), {})
         self.assertTrue(res, ({}, defaultdict(int)))
 
-    # @patch('VirClass.VirClass.load.load_from_file_fasta')
-    # @patch('VirClass.VirClass.load.classes_to_numerical')
-    # @patch('VirClass.VirClass.load.build_dataset_ids')
-    # def test_load_data(self, arg1, arg2, arg3):
-    #     self.assertRaisesRegex(ValueError, "Test size is in wrong range - it must be between 0.0 and 1.0.",
-    #                            load.load_data, filename='a.fasta', test=1.0)
-    #     self.assertRaisesRegex(ValueError, "Test size is in wrong range - it must be between 0.0 and 1.0.",
-    #                            load.load_data, filename='a.fasta', test=-1.0)
-    #     self.assertRaisesRegex(ValueError, "Sampling size is in wrong range - it must be between 0.0 and 1.0.",
-    #                            load.load_data, filename='a.fasta', sample=1.0)
-    #     self.assertRaisesRegex(ValueError, "Sampling size is in wrong range - it must be between 0.0 and 1.0.",
-    #                            load.load_data, filename='a.fasta', sample=-1.0)
-    #
-    #     temp = defaultdict(list)
-    #     temp['1004345262'] = \
-    #         'TGTTGCGTTAACAACAAACCAACCTCCGACCCAAAACAAAGATGAAAATAAAAGATGCCACCCAAACGCCGACTAGTGGACAGCCCAGAAGATATGGAAGAAA' \
-    #         'GATGCCACCCAAACGCCGACTAGTGGACAGCCCAGAAGATATGGAAGACGAGGGACCCTCTGACCGACCAACTCACCTACCCAAACTCCCAGGAACC'
-    #     temp['10043452'] = \
-    #         'GATGCCACCCAAACGCCGACTAGTGGACAGCCCAGAAGATATGGAAGACGAGGGACCCTCTGACCGACCAACTCACCTACCCAAACTCCCAGGAACC' \
-    #         'TGTTGCGTTAACAACAAACCAACCTCCGACCCAAAACAAAGATGAAAATAAAAGATGCCACCCAAACGCCGACTAGTGGACAGCCCAGAAGATATGGA'
-    #     temp['1023464444'] = \
-    #         'AAACACAACAGGGCCTCAAGCCTGTCGCAAAAAGAACAGGTAACAACGACAGGAACGTGGCGGACGAGATACAGACCGGCACGTAAACCCAACCGACAC' \
-    #         'ATCCAATATGGTACCCCTCATTGAACCACATAACACAACACAGGCCGCAACTCCGAATACGCATGACAATCACCAAGAATGGGCAAGCTCAATCGCAGCACTCATG'
-    #     temp['1028356461'] = \
-    #         'CCAATCCCGACCGGAATGGAGGTCCTGACAGGGTACTAAACCCAGTGTAGCGCCCACACGCAATCAGAACAAGACAAAAGCCCCCTAAACCCCACTCCGAAAA' \
-    #         'GCGGACAAAAATCCAACCTCATACAAACAAACAAGGGCTAGATGCCAACAGGGACTGCCATCCAATGAGAATGTCCATAGGAGTCGAAACAAAGCCA'
-    #     temp['1028356384'] = \
-    #         'GAAGCCACCAGAAAGATAAGTGAAACAGTACACGAGCCCTAAACACAACGAATCTTCATAATAACCACCCGACTAAGCGACAAAACCACAGGAACCGACCC' \
-    #         'AGACGAAAGCACCGACCAGTGATCACAACTCTTTCGAGGTCACACCCGGTACTACGTAAGTGCCACCATCGCAGCTAAGAGGGCACGCA'
-    #
-    #     labels_assert = {'1004345262':
-    #                      'Viruses;ssRNA viruses;ssRNA negative-strand viruses;Mononegavirales;Bornaviridae;Bornavirus'}
-    #
-    #     load.load_from_file_fasta.return_value = (temp, labels_assert)
-    #
-    #     # mock load_dataset with side effect IOError
-    #     with patch('VirClass.VirClass.load.load_dataset', mock_open(), create=True) as mocked_open:
-    #         mocked_open.side_effect = IOError()
-    #         self.assertRaisesRegex(AssertionError, "", load.load_data, filename='a.fasta')
-    #
-    #     labels = {'1004345262':
-    #               'Viruses;ssRNA viruses;ssRNA negative-strand viruses;Mononegavirales;Bornaviridae;Bornavirus',
-    #               '10043452': 'Viruses;ssRNA viruses;ssRNA positive-strand viruses;ViralesA;ViridaeB;VirusC',
-    #               '1023464444': 'Viruses;ssDNA viruses;ssDNA negative-strand viruses;ViralesA;ViridaeB;VirusC',
-    #               '1028356461': 'Viruses;ssDNA viruses;ssDNA negative-strand viruses;ViridaeB;VirusC',
-    #               '1028356384': 'Viruses;ssDNA viruses;ssDNA negative-strand viruses;ViridaeB;VirusC'}
-    #
-    #     load.load_from_file_fasta.return_value = (temp, labels)
-    #     load.build_dataset_ids.return_value = ['1004345262', '10043452', '1023464444', '1028356461', '1028356384']
-    #     res_temp = defaultdict(int)
-    #     res_temp[0] = 195.0
-    #     res_temp[1] = 200.0
-    #     res_temp[2] = 205.0
-    #     res_temp[2] = 205.0
-    #     res_temp[2] = 195.0
-    #     classes_to_numerical_expected = ({'10043452': 0, '1004345262': 1, '1023464444': 2, '1028356461': 3,
-    #                                       '1028356384': 4}, res_temp)
-    #     load.classes_to_numerical.return_value = classes_to_numerical_expected
-    #     load.build_dataset_ids.return_value = {'tr_ids': ['1004345262', '10043452', '1028356461', '1028356384'],
-    #                                            'te_ids': ['1023464444'],
-    #                                            'trtr_ids': ['10043452', '1028356461', '1004345262'],
-    #                                            'trte_ids': ['1028356384']}
+    @patch('VirClass.VirClass.load.load_from_file_fasta')
+    @patch('VirClass.VirClass.load.classes_to_numerical')
+    @patch('VirClass.VirClass.load.build_dataset_ids')
+    @patch('VirClass.VirClass.load.one_hot')
+    @patch('VirClass.VirClass.load.os.path.join')
+    @patch('VirClass.VirClass.load.dataset_from_id')
+    @patch('VirClass.VirClass.load.pickle.dump')
+    @patch('VirClass.VirClass.load.load_dataset')
+    def test_load_data(self, load_dataset_mock, pickle_mock, dataset_mock, os_mock, one_hot_mock, arg2, arg3, arg4):
+        self.assertRaisesRegex(AssertionError, "Test size is in wrong range - it must be between 0.0 and 1.0.",
+                               load.load_data, filename='a.fasta.gz', test=1.0)
+        self.assertRaisesRegex(AssertionError, "Test size is in wrong range - it must be between 0.0 and 1.0.",
+                               load.load_data, filename='a.fasta.gz', test=-1.0)
+        self.assertRaisesRegex(AssertionError, "Sampling size is in wrong range - it must be between 0.0 and 1.0.",
+                               load.load_data, filename='a.fasta.gz', sample=2.0)
+        self.assertRaisesRegex(AssertionError, "Sampling size is in wrong range - it must be between 0.0 and 1.0.",
+                               load.load_data, filename='a.fasta.gz', sample=-1.0)
+        self.assertRaisesRegex(AssertionError, "Currently supported suffixes is '.fasta.gz'.",
+                               load.load_data, filename='a.txt')
+        self.assertRaisesRegex(AssertionError, "Both transmission dictionary and unique nucleotides cannot be empty.",
+                               load.load_data, filename='a.fasta.gz')
+
+        temp = defaultdict(list)
+        temp['1004345262'] = \
+            'TGTTGCGTTAACAACAAACCAACCTCCGACCCAAAACAAAGATGAAAATAAAAGATGCCACCCAAACGCCGACTAGTGGACAGCCCAGAAGATATGGAAGAAA' \
+            'GATGCCACCCAAACGCCGACTAGTGGACAGCCCAGAAGATATGGAAGACGAGGGACCCTCTGACCGACCAACTCACCTACCCAAACTCCCAGGAACC'
+        temp['10043452'] = \
+            'GATGCCACCCAAACGCCGACTAGTGGACAGCCCAGAAGATATGGAAGACGAGGGACCCTCTGACCGACCAACTCACCTACCCAAACTCCCAGGAACC' \
+            'TGTTGCGTTAACAACAAACCAACCTCCGACCCAAAACAAAGATGAAAATAAAAGATGCCACCCAAACGCCGACTAGTGGACAGCCCAGAAGATATGGA'
+        temp['1023464444'] = \
+            'AAACACAACAGGGCCTCAAGCCTGTCGCAAAAAGAACAGGTAACAACGACAGGAACGTGGCGGACGAGATACAGACCGGCACGTAAACCCAACCGACAC' \
+            'ATCCAATATGGTACCCCTCATTGAACCACATAACACAACACAGGCCGCAACTCCGAATACGCATGACAATCACCAAGAATGGGCAAGCTCAATCGCAGCACTCATG'
+        temp['1028356461'] = \
+            'CCAATCCCGACCGGAATGGAGGTCCTGACAGGGTACTAAACCCAGTGTAGCGCCCACACGCAATCAGAACAAGACAAAAGCCCCCTAAACCCCACTCCGAAAA' \
+            'GCGGACAAAAATCCAACCTCATACAAACAAACAAGGGCTAGATGCCAACAGGGACTGCCATCCAATGAGAATGTCCATAGGAGTCGAAACAAAGCCA'
+        temp['1028356384'] = \
+            'GAAGCCACCAGAAAGATAAGTGAAACAGTACACGAGCCCTAAACACAACGAATCTTCATAATAACCACCCGACTAAGCGACAAAACCACAGGAACCGACCC' \
+            'AGACGAAAGCACCGACCAGTGATCACAACTCTTTCGAGGTCACACCCGGTACTACGTAAGTGCCACCATCGCAGCTAAGAGGGCACGCA'
+
+        labels_assert = {'1004345262':
+                         'Viruses;ssRNA viruses;ssRNA negative-strand viruses;Mononegavirales;Bornaviridae;Bornavirus'}
+
+        load.load_from_file_fasta.return_value = (temp, labels_assert)
+
+        self.assertRaisesRegex(AssertionError,
+                               "When loading from fasta keys in data dictionary and labels dictionary must be same.",
+                               load.load_data, filename='a.fasta.gz', unique_nuc='ATCG')
+
+        labels = {'1023464444': 'Viruses;ssDNA viruses;ssDNA negative-strand viruses;ViralesA;ViridaeB;VirusC',
+                  '1028356461': 'Viruses;ssDNA viruses;ssDNA negative-strand viruses;ViridaeB;VirusC',
+                  '10043452': 'Viruses;ssRNA viruses;ssRNA positive-strand viruses;ViralesA;ViridaeB;VirusC',
+                  '1028356384': 'Viruses;ssDNA viruses;ssDNA negative-strand viruses;ViridaeB;VirusC',
+                  '1004345262':
+                  'Viruses;ssRNA viruses;ssRNA negative-strand viruses;Mononegavirales;Bornaviridae;Bornavirus'}
+
+        load.load_from_file_fasta.return_value = (temp, labels)
+        res_temp = defaultdict(int)
+        res_temp[0] = 205.0
+        res_temp[1] = 200.0
+        res_temp[2] = 190.0
+        res_temp[3] = 197.5
+        classes_to_numerical_expected = ({'1023464444': 0, '1028356461': 1, '10043452': 2, '1028356384': 1,
+                                          '1004345262': 3}, res_temp)
+        load.classes_to_numerical.return_value = classes_to_numerical_expected
+        load.build_dataset_ids.return_value = {'tr_ids': ['1004345262', '10043452', '1028356461', '1028356384'],
+                                               'te_ids': ['1023464444'],
+                                               'trtr_ids': ['10043452', '1028356461', '1004345262'],
+                                               'trte_ids': ['1028356384']}
+        trans_dict = {"A": [1, 0, 0, 0], "T": [0, 1, 0, 0], "C": [0, 0, 1, 0], "G": [0, 0, 0, 1]}
+        # load.dataset_from_id.return_value = {}
+        dataset_expected = {'teX': [
+            [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0,
+             1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0,
+             1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1,
+             0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0,
+             0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0,
+             1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0,
+             1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1,
+             1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0,
+             1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0,
+             0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0,
+             1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0,
+             1, 0, 0, 0]], 'teY': [0], 'trX': [
+            [0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0,
+             0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1,
+             1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0,
+             0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0,
+             1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0,
+             1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1,
+             1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0,
+             0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0,
+             0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0,
+             0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0,
+             1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1,
+             0, 1, 0, 0],
+            [0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1,
+             1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1,
+             0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1,
+             1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0,
+             0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1,
+             0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0,
+             0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0,
+             0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0,
+             0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0,
+             0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0,
+             0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1,
+             1, 0, 0, 0],
+            [0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0,
+             1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0,
+             0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0,
+             0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0,
+             0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0,
+             1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1,
+             1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0,
+             1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0,
+             0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0,
+             1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0,
+             0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0,
+             0, 0, 0, 1]], 'trY': [3, 2, 1], 'trteX': [
+            [0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0,
+             1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0,
+             1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0,
+             0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1,
+             0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0,
+             0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0,
+             0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0,
+             1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0,
+             0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0,
+             1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0,
+             0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0,
+             0, 0, 1, 0]], 'trteY': [1]}
+        dataset_mock.side_effect = [(dataset_expected['teX'], dataset_expected['teY']),
+                                    (dataset_expected['trX'], dataset_expected['trY']),
+                                    (dataset_expected['trteX'], dataset_expected['trteY'])]
+        os_mock.side_effect = ['dummy', 'dummy', 'a-trX.fasta.gz', 'a-teX.fasta.gz', 'a-trY.fasta.gz', 'a-teY.fasta.gz',
+                               'a-trteX.fasta.gz', 'a-trteY.fasta.gz']
         # mock load_dataset without side effect
 
+        # mock load_dataset with side effect IOError
+        load_dataset_mock.side_effect = IOError()
+
+        m_file = mock_open()
+        with patch('VirClass.VirClass.load.gzip.open', m_file):
+            res = load.load_data(filename='a.fasta.gz', trans_dict=trans_dict, onehot=False)
+            self.assertEqual(m_file.call_count, 6)
+            self.assertTrue(isinstance(res, tuple))
+            self.assertEqual(pickle_mock.call_count, 6)
+            self.assertDictEqual(res[-1], res_temp)
+            self.assertTrue(isinstance(res[-2], int))
+            for idx, dataset_name in enumerate(['trX', 'teX', 'trY', 'teY', 'trteX', 'trteY']):
+                m_file.assert_any_call('a-' + dataset_name + '.fasta.gz', 'wt')
+                pickle_mock.assert_call_with(dataset_expected[dataset_name])
+                np.testing.assert_array_equal(res[idx], np.asarray(dataset_expected[dataset_name]))
+
+        dataset_mock.side_effect = [(dataset_expected['teX'], dataset_expected['teY']),
+                                    (dataset_expected['trX'], dataset_expected['trY']),
+                                    (dataset_expected['trteX'], dataset_expected['trteY'])]
+        os_mock.side_effect = ['dummy', 'dummy', 'a-trX.fasta.gz', 'a-teX.fasta.gz', 'a-trY.fasta.gz', 'a-teY.fasta.gz',
+                               'a-trteX.fasta.gz', 'a-trteY.fasta.gz']
+
+        m_file.reset_mock()
+        pickle_mock.reset_mock()
+        one_hot_mock.side_effect = (np.array([[0, 0, 0, 1], [0, 0, 1, 0], [0, 1, 0, 0]]),
+                                    np.array([[1, 0, 0, 0]]),
+                                    np.array([[0, 1, 0, 0]]))
+        dataset_expected['trY'] = np.array([[0, 0, 0, 1], [0, 0, 1, 0], [0, 1, 0, 0]])
+        dataset_expected['teY'] = np.array([[1, 0, 0, 0]])
+        dataset_expected['trteY'] = np.array([[0, 1, 0, 0]])
+        with patch('VirClass.VirClass.load.gzip.open', m_file):
+            res = load.load_data(filename='a.fasta.gz', trans_dict=trans_dict, onehot=True)
+            self.assertEqual(m_file.call_count, 6)
+            self.assertTrue(isinstance(res, tuple))
+            self.assertEqual(pickle_mock.call_count, 6)
+            self.assertDictEqual(res[-1], res_temp)
+            self.assertTrue(isinstance(res[-2], int))
+            for idx, dataset_name in enumerate(['trX', 'teX', 'trY', 'teY', 'trteX', 'trteY']):
+                m_file.assert_any_call('a-' + dataset_name + '.fasta.gz', 'wt')
+                pickle_mock.assert_call_with(dataset_expected[dataset_name])
+                np.testing.assert_array_equal(res[idx], np.asarray(dataset_expected[dataset_name]))
+
+
 if __name__ == '__main__':
-    unittest.main()
+    main()

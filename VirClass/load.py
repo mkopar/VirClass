@@ -35,13 +35,11 @@ def one_hot(x, n):
                         [0, 0, 0, 1, 0],
                         [0, 0, 0, 0, 1]
 
-    :param x: vector true classes (Y)
+    :param x: vector of true classes (Y)
     :param n: number of classes
     :return: Y matrix in binary representation
     """
-    if np.max(x) >= n:
-        raise AssertionError(
-            "USER ERROR - cannot create numpy array; number of classes must be bigger than max number of list")
+    assert np.max(x) < n, "Cannot create numpy array; number of classes must be bigger than max number of list."
     if isinstance(x, list):
         x = np.array(x)
     x = x.flatten()
@@ -56,7 +54,7 @@ def seq_to_bits(vec, unique_nucleotides=None, trans_dict=None):
 
     Get sequence and transform it into number representation. Given parameters set some rules in representation.
     :param vec: sequence to transform
-    :param unique_nucleotides: number of unique nucleotides in loaded files - mandatory if transmission_dict is None
+    :param unique_nucleotides: string of unique nucleotides in loaded files - mandatory if transmission_dict is None
     :param trans_dict: transmission dictionary - if None, build it here (every nucleotide represents one bit)
                                      e.g. if our unique nucleotides are "ATCGYM", then corresponding dictionary will be
                                           {"A": [1, 0, 0, 0, 0, 0]
@@ -78,8 +76,7 @@ def seq_to_bits(vec, unique_nucleotides=None, trans_dict=None):
     :return: number representation of vec
     """
     if trans_dict is None:
-        if unique_nucleotides is None:
-            raise AssertionError("USER ERROR - number of unique nucleotides and transmission dictionary not present.")
+        assert unique_nucleotides is not None, "Number of unique nucleotides and transmission dictionary not present."
         trans_dict = {}
         for el in unique_nucleotides:
             trans_dict[el] = [1 if x == el else 0 for x in unique_nucleotides]
@@ -174,7 +171,7 @@ def load_from_file_fasta(filename, depth=4, taxonomy_el_count=-1):
     return temp_data, temp_tax
 
 
-def dataset_from_id(temp_data, temp_tax, ids, read_size, sample, trans_dict):
+def dataset_from_id(temp_data, temp_tax, ids, read_size, sample, trans_dict, unique_nuc=None):
     """
     Build dataset from given IDs list and other params.
 
@@ -184,9 +181,12 @@ def dataset_from_id(temp_data, temp_tax, ids, read_size, sample, trans_dict):
     :param read_size: size of reads you want to generate
     :param sample: how many data you want to skip - 20% means that every fifth read will be included
     :param trans_dict: dictionary of transmission
+    :param unique_nuc: number of unique nucleotides in loaded files - mandatory if transmission_dict is None
     :return: build dataset with numeric sequences and classes
     """
-    assert 0.0 < sample <= 1.0
+    assert 0.0 < sample <= 1.0, "Sampling size is in wrong range - it must be between 0.0 and 1.0."
+    assert trans_dict is not None or unique_nuc is not None, \
+        "Both transmission dictionary and unique nucleotides cannot be empty."
     tempX = []
     tempY = []
     for te_id in ids:
@@ -194,7 +194,7 @@ def dataset_from_id(temp_data, temp_tax, ids, read_size, sample, trans_dict):
         while seq:
             if len(seq) < read_size:
                 break
-            tempX.append(seq_to_bits(seq[:read_size], trans_dict=trans_dict))
+            tempX.append(seq_to_bits(seq[:read_size], trans_dict=trans_dict, unique_nucleotides=unique_nuc))
             tempY.append(temp_tax[te_id])
             # don't use whole sequence, only every second, third etc (depending on sample percent)
             # use ceil to avoid decimals
@@ -296,7 +296,7 @@ def classes_to_numerical(temp_data, labels):
 
 
 def load_data(filename, test=0.2, trans_dict=None, depth=4, sample=0.2, read_size=100, onehot=True,
-              seed=random.randint(0, sys.maxsize), taxonomy_el_count=-1):
+              seed=random.randint(0, sys.maxsize), taxonomy_el_count=-1, unique_nuc=None):
     """
     Load data from filename prefix or build new data and save to file.
 
@@ -313,21 +313,24 @@ def load_data(filename, test=0.2, trans_dict=None, depth=4, sample=0.2, read_siz
     :param onehot: binary representation of true classes
     :param seed: random seed for replicating experiments
     :param taxonomy_el_count: how many elements we want in taxonomy; -1 means whole taxonomy
+    :param unique_nuc: number of unique nucleotides in loaded files - mandatory if transmission_dict is None
     :return: train and test datasets as numpy arrays
     """
     # sample < 1.0 ali sample < read_size?
-    try:
-        assert 1.0 > test >= 0.0
-    except AssertionError:
-        raise ValueError('Test size is in wrong range - it must be between 0.0 and 1.0.')
-    try:
-        assert 0.0 < sample <= 1.0
-    except AssertionError:
-        raise ValueError('Sampling size is in wrong range - it must be between 0.0 and 1.0.')
+    assert 0.0 <= test < 1.0, "Test size is in wrong range - it must be between 0.0 and 1.0."
+    assert 0.0 < sample <= 1.0, "Sampling size is in wrong range - it must be between 0.0 and 1.0."
+    assert (".fasta.gz" in filename), "Currently supported suffixes is '.fasta.gz'."
+    suffix = ".fasta.gz"
+    assert trans_dict is not None or unique_nuc is not None, \
+        "Both transmission dictionary and unique nucleotides cannot be empty."
 
     # load data from fasta file - we need it here because of num_of_classes - we only can get this from labels/data dict
     temp_data, labels = load_from_file_fasta(os.path.join(MEDIA_DIR, filename), depth=depth,
                                              taxonomy_el_count=taxonomy_el_count)
+
+    # keys must be same
+    assert set(temp_data.keys()) == set(labels.keys()), \
+        "When loading from fasta keys in data dictionary and labels dictionary must be same."
 
     temp_tax, class_size = classes_to_numerical(temp_data, labels)
     number_of_classes = len(list(class_size.keys()))
@@ -336,33 +339,29 @@ def load_data(filename, test=0.2, trans_dict=None, depth=4, sample=0.2, read_siz
 
     try:
         # we save files as something.fasta.gz, so we try to open those files - if they don't exist, generate new ones
-        dataset["trX"] = load_dataset(os.path.join(MEDIA_DIR, filename[:filename.index(".fasta.gz")] + "-trX.fasta.gz"))
-        dataset["trY"] = load_dataset(os.path.join(MEDIA_DIR, filename[:filename.index(".fasta.gz")] + "-trY.fasta.gz"))
-        dataset["teX"] = load_dataset(os.path.join(MEDIA_DIR, filename[:filename.index(".fasta.gz")] + "-teX.fasta.gz"))
-        dataset["teY"] = load_dataset(os.path.join(MEDIA_DIR, filename[:filename.index(".fasta.gz")] + "-teY.fasta.gz"))
-        dataset["trteX"] = load_dataset(os.path.join(MEDIA_DIR,
-                                                     filename[:filename.index(".fasta.gz")] + "-trteX.fasta.gz"))
-        dataset["trteY"] = load_dataset(os.path.join(MEDIA_DIR,
-                                                     filename[:filename.index(".fasta.gz")] + "-trteY.fasta.gz"))
+        dataset["trX"] = load_dataset(os.path.join(MEDIA_DIR, filename[:filename.index(suffix)] + "-trX" + suffix))
+        dataset["trY"] = load_dataset(os.path.join(MEDIA_DIR, filename[:filename.index(suffix)] + "-trY" + suffix))
+        dataset["teX"] = load_dataset(os.path.join(MEDIA_DIR, filename[:filename.index(suffix)] + "-teX" + suffix))
+        dataset["teY"] = load_dataset(os.path.join(MEDIA_DIR, filename[:filename.index(suffix)] + "-teY" + suffix))
+        dataset["trteX"] = load_dataset(os.path.join(MEDIA_DIR, filename[:filename.index(suffix)] + "-trteX" + suffix))
+        dataset["trteY"] = load_dataset(os.path.join(MEDIA_DIR, filename[:filename.index(suffix)] + "-trteY" + suffix))
     except IOError:
-        # keys must be same
-        assert list(temp_data.keys()) == list(labels.keys())
         oids = [x for x in list(labels.keys())]
         # build dataset
         datasets_ids = build_dataset_ids(oids=oids, test=test, seed=seed)
         dataset["teX"], dataset["teY"] = dataset_from_id(temp_data, temp_tax, datasets_ids["te_ids"], read_size,
-                                                         sample, trans_dict)
+                                                         sample, trans_dict, unique_nuc)
         dataset["trX"], dataset["trY"] = dataset_from_id(temp_data, temp_tax, datasets_ids["trtr_ids"], read_size,
-                                                         sample, trans_dict)
+                                                         sample, trans_dict, unique_nuc)
         dataset["trteX"], dataset["trteY"] = dataset_from_id(temp_data, temp_tax, datasets_ids["trte_ids"], read_size,
-                                                             sample, trans_dict)
+                                                             sample, trans_dict, unique_nuc)
         # set filenames for saving like filename-trX, filename-teX...
-        save_dataset(MEDIA_DIR + filename[:filename.index(".fasta.gz")] + "-trX.fasta.gz", dataset["trX"])
-        save_dataset(MEDIA_DIR + filename[:filename.index(".fasta.gz")] + "-trY.fasta.gz", dataset["trY"])
-        save_dataset(MEDIA_DIR + filename[:filename.index(".fasta.gz")] + "-teX.fasta.gz", dataset["teX"])
-        save_dataset(MEDIA_DIR + filename[:filename.index(".fasta.gz")] + "-teY.fasta.gz", dataset["teY"])
-        save_dataset(MEDIA_DIR + filename[:filename.index(".fasta.gz")] + "-trteX.fasta.gz", dataset["trteX"])
-        save_dataset(MEDIA_DIR + filename[:filename.index(".fasta.gz")] + "-trteY.fasta.gz", dataset["trteY"])
+        save_dataset(os.path.join(MEDIA_DIR, filename[:filename.index(suffix)] + "-trX" + suffix), dataset["trX"])
+        save_dataset(os.path.join(MEDIA_DIR, filename[:filename.index(suffix)] + "-teX" + suffix), dataset["teY"])
+        save_dataset(os.path.join(MEDIA_DIR, filename[:filename.index(suffix)] + "-trY" + suffix), dataset["trY"])
+        save_dataset(os.path.join(MEDIA_DIR, filename[:filename.index(suffix)] + "-teY" + suffix), dataset["teY"])
+        save_dataset(os.path.join(MEDIA_DIR, filename[:filename.index(suffix)] + "-trteX" + suffix), dataset["trteX"])
+        save_dataset(os.path.join(MEDIA_DIR, filename[:filename.index(suffix)] + "-trteY" + suffix), dataset["trteY"])
 
     if onehot:
         dataset["trY"] = one_hot(dataset["trY"], number_of_classes)
