@@ -104,32 +104,32 @@ def rec_dd():
     return defaultdict(rec_dd)
 
 
-def update_taxonomy(temp_taxonomy, tax_path, genome_id):
+def update_taxonomy(taxonomy, tax_path, genome_id):
     """
     Create dictionary with taxonomy name and IDs of sequences which belongs to specific taxonomy.
 
-    :param temp_taxonomy: current taxonomy
+    :param taxonomy: current taxonomy
     :param tax_path: taxonomy path
     :param genome_id: genome_id
     :return: updated taxonomy
     """
     if len(tax_path) == 0:
-        return temp_taxonomy
+        return taxonomy
 
     tax = tax_path[0].lower()
-    if tax in temp_taxonomy:  # check if tax in taxonomy and update
+    if tax in taxonomy:  # check if tax in taxonomy and update
         # temp_taxonomy[tax]["data"].append(seq_record.annotations["gi"])
-        temp_taxonomy[tax]["data"].append(genome_id)
+        taxonomy[tax]["data"].append(genome_id)
         # taxonomy[tax]["data"].append(get_gene(rec))
-        update_taxonomy(temp_taxonomy[tax], tax_path[1:], genome_id)
+        update_taxonomy(taxonomy[tax], tax_path[1:], genome_id)
     else:
         # temp_taxonomy[tax] = {"data": list({seq_record.annotations["gi"]})}
-        temp_taxonomy[tax] = {"data": list({genome_id})}
+        taxonomy[tax] = {"data": list({genome_id})}
         # taxonomy[tax] = dict({"data": list({get_gene(rec)})})
-        temp = update_taxonomy(temp_taxonomy[tax], tax_path[1:], genome_id)
+        temp = update_taxonomy(taxonomy[tax], tax_path[1:], genome_id)
         if len(temp) > 1:  # 1 = data, 2 = data + key
-            temp_taxonomy = temp
-    return temp_taxonomy
+            taxonomy = temp
+    return taxonomy
 
 
 def filter_classification(rec, to_filter):
@@ -150,23 +150,23 @@ def filter_classification(rec, to_filter):
     return in_to_filter
 
 
-def print_nice(temp_taxonomy, level=0):
+def print_nice(taxonomy, level=0):
     """
     Print taxonomy with tabs.
 
-    :param temp_taxonomy: taxonomy
+    :param taxonomy: taxonomy
     :param level: current level
     :return:
     """
-    for i in sorted(temp_taxonomy.keys()):
+    for i in sorted(taxonomy.keys()):
         if i == "data":
-            if len(temp_taxonomy) == 1:
+            if len(taxonomy) == 1:
                 return
             else:
                 continue
         else:
-            print(level * "\t", i.replace("->", "", 1), len(temp_taxonomy[i]["data"]))
-            print_nice(temp_taxonomy[i], level + 1)
+            print(level * "\t", i.replace("->", "", 1), len(taxonomy[i]["data"]))
+            print_nice(taxonomy[i], level + 1)
 
 
 def load_whole_taxonomy():
@@ -175,8 +175,8 @@ def load_whole_taxonomy():
 
     :return: data, label
     """
-    temp_taxonomy = get_taxonomy(get_gids())
-    list_nodes = get_list_nodes_ids_labels(temp_taxonomy)
+    taxonomy = get_taxonomy(get_gids())
+    list_nodes = get_list_nodes_ids_labels(taxonomy)
     data, labels = list(zip(*list_nodes))
     for label in labels:
         print(label)
@@ -208,14 +208,14 @@ def get_taxonomy(id_list, count=-1):
     :param count: how many elements we want in taxonomy; -1 means whole taxonomy
     :return: taxonomy
     """
-    temp_taxonomy = rec_dd()
+    taxonomy = rec_dd()
     temp_count = 1
     for genome_id in id_list:
         try:
             rec = get_rec(genome_id)
             in_filter = filter_classification(rec, list({"bacteria", "unclassified", "unassigned"}))
             if not in_filter:
-                update_taxonomy(temp_taxonomy, rec.annotations["taxonomy"], genome_id)
+                update_taxonomy(taxonomy, rec.annotations["taxonomy"], genome_id)
 
                 if count != -1:
                     if temp_count == count:
@@ -235,122 +235,141 @@ def get_taxonomy(id_list, count=-1):
             print("problems with pickling object...")
             print(p)
 
-    return temp_taxonomy
+    return taxonomy
+
+
+def remove_small_nodes(taxonomy, threshold_size=100):
+    """
+    Remove small nodes from dataset.
+    :param taxonomy: input taxonomy
+    :param threshold_size: how many nodes do parent need to keep it
+    :return: output taxonomy
+    """
+    if isinstance(taxonomy, defaultdict) or isinstance(taxonomy, dict):
+        taxonomy_keys = [x for x in list(taxonomy.keys()) if x != "data"]
+        for i in taxonomy_keys:
+            print(i, len(taxonomy[i]['data']))
+            if len(taxonomy[i]['data']) < threshold_size:
+                taxonomy.pop(i)
+            else:
+                remove_small_nodes(taxonomy[i])
+    else:
+        return taxonomy
 
 
 # ************  LIST OPERATIONS  ************ #
 
-def remove_lists(temp_taxonomy):
+def remove_lists(taxonomy):
     """
     Remove all list nodes from taxonomy.
 
-    :param temp_taxonomy: taxonomy
+    :param taxonomy: taxonomy
     :return: taxonomy
     """
     # check for recurse exit
-    if isinstance(temp_taxonomy, defaultdict) or isinstance(temp_taxonomy, dict):
-        for i in [x for x in list(temp_taxonomy.keys()) if x != "data"]:
-            if set(temp_taxonomy[i]) == set(list({"data"})):
+    if isinstance(taxonomy, defaultdict) or isinstance(taxonomy, dict):
+        for i in [x for x in list(taxonomy.keys()) if x != "data"]:
+            if set(taxonomy[i]) == set(list({"data"})):
                 # if parent has only one list node, remove it
                 # if len([x for x in taxonomy.keys() if x != "data"]) == 1:
-                temp_taxonomy.pop(i)
+                taxonomy.pop(i)
                 continue
             else:
-                remove_lists(temp_taxonomy[i])
+                remove_lists(taxonomy[i])
     else:
-        return temp_taxonomy
+        return taxonomy
 
 
-def get_list_nodes_unique(temp_taxonomy, parent=""):
+def get_list_nodes_unique(taxonomy, parent=""):
     """
     Get taxonomy and return unique list nodes.
 
-    :param temp_taxonomy: taxonomy
+    :param taxonomy: taxonomy
     :param parent: parent of current node
     :return: unique list nodes
     """
     # checked by hand and it works as expected
     list_nodes = list()
-    keys = [x for x in list(temp_taxonomy.keys()) if x != "data"]
+    keys = [x for x in list(taxonomy.keys()) if x != "data"]
     for i in keys:
-        if set(temp_taxonomy[i]) == set(list({"data"})):
+        if set(taxonomy[i]) == set(list({"data"})):
             list_nodes.append(i)
         else:
-            list_nodes += get_list_nodes_unique(temp_taxonomy[i], parent + "->" + i)
+            list_nodes += get_list_nodes_unique(taxonomy[i], parent + "->" + i)
     return list_nodes
 
 
-def count_list_nodes(temp_taxonomy):
+def count_list_nodes(taxonomy):
     """
     Count list nodes and return sum.
 
-    :param temp_taxonomy: taxonomy
+    :param taxonomy: taxonomy
     :return: int
     """
     count = 0
-    keys = [x for x in list(temp_taxonomy.keys()) if x != "data"]
+    keys = [x for x in list(taxonomy.keys()) if x != "data"]
     for i in keys:
-        if set(temp_taxonomy[i]) == set(list({"data"})):
+        if set(taxonomy[i]) == set(list({"data"})):
             if i == keys[-1]:
                 count += 1
                 return count
             else:
                 count += 1
         else:
-            count += count_list_nodes(temp_taxonomy[i])
+            count += count_list_nodes(taxonomy[i])
     return count
 
 
-def get_list_nodes_ids_labels(d, parent=""):
+def get_list_nodes_ids_labels(taxonomy, parent=""):
     """
     Get taxonomy and return tuples of all list nodes.
 
-    :param d: taxonomy
+    :param taxonomy: taxonomy
     :param parent: parent
     :return: list of tuples (id, class)
     """
-    if len(list(d.keys())) > 1 or list(d.keys()) == ["viruses"]:
+    if len(list(taxonomy.keys())) > 1 or list(taxonomy.keys()) == ["viruses"]:
         temp = []
-        for k in [x for x in list(d.keys()) if x != "data"]:
-            temp += get_list_nodes_ids_labels(d[k], k)
+        for k in [x for x in list(taxonomy.keys()) if x != "data"]:
+            temp += get_list_nodes_ids_labels(taxonomy[k], k)
         return temp
     else:
-        return [(x, parent) for x in d["data"]]
+        return [(x, parent) for x in taxonomy["data"]]
 
 
 # ************  ALL NODES OPERATIONS  ************ #
 
-def count_examples(temp_taxonomy):
+def count_examples(taxonomy):
     """
     Get taxonomy, count examples in every node and return sum.
 
-    :param temp_taxonomy: taxonomy
+    :param taxonomy: taxonomy
     :return: sum of examples
     """
     count = 0
-    keys = [x for x in list(temp_taxonomy.keys()) if x != "data"]
+    keys = [x for x in list(taxonomy.keys()) if x != "data"]
     for i in keys:
-        if set(temp_taxonomy[i]) == set(list({"data"})):
+        if set(taxonomy[i]) == set(list({"data"})):
             if i == keys[-1]:
-                count += len(temp_taxonomy[i]["data"])
+                count += len(taxonomy[i]["data"])
                 return count
             else:
-                count += len(temp_taxonomy[i]["data"])
+                count += len(taxonomy[i]["data"])
         else:
-            count += count_examples(temp_taxonomy[i])
+            count += count_examples(taxonomy[i])
     return count
 
 
-def get_all_nodes(temp_taxonomy, parent=""):
+def get_all_nodes(taxonomy, parent=""):
     """
     Get taxonomy and return all nodes (including list nodes).
 
     :param parent: parent of current node - default ""
-    :param temp_taxonomy: taxonomy
+    :param taxonomy: taxonomy
     :return: all nodes
     """
     all_nodes = list()
-    keys = [x for x in list(temp_taxonomy.keys()) if x != "data"]
+    keys = [x for x in list(taxonomy.keys()) if x != "data"]
     for i in keys:
         # if we want all non-list nodes, than this stays, otherwise comment this
         # if len([x for x in taxonomy[i].keys() if x != "data"]) == 0:
@@ -359,7 +378,7 @@ def get_all_nodes(temp_taxonomy, parent=""):
             all_nodes.append(parent + "->" + i)
         else:
             all_nodes.append(i)
-        all_nodes += get_all_nodes(temp_taxonomy[i], i)
+        all_nodes += get_all_nodes(taxonomy[i], i)
     return all_nodes
 
 
@@ -407,9 +426,12 @@ def run(taxonomy_el_count=-1):
     :param taxonomy_el_count: how many elements we want in taxonomy; -1 means whole taxonomy
     :return: data, label
     """
-    temp_taxonomy = get_taxonomy(get_gids(), count=taxonomy_el_count)
+    taxonomy = get_taxonomy(get_gids(), count=taxonomy_el_count)
     # remove_lists(taxonomy)
-    list_nodes = get_list_nodes_ids_labels(temp_taxonomy)
+    print_nice(taxonomy)
+    remove_small_nodes(taxonomy, 100)
+    print_nice(taxonomy)
+    list_nodes = get_list_nodes_ids_labels(taxonomy)
     data, labels = list(zip(*list_nodes))
     # for label in labels:
     #     print label
@@ -427,10 +449,11 @@ def run(taxonomy_el_count=-1):
 
 if __name__ == "__main__":
     # a = load_seqs_from_ncbi(taxonomy_el_count=20)
-    taxonomy = get_taxonomy(get_gids())
-    print("no of examples after taxonomy was built: %d" % count_examples(taxonomy))
-    print("no of list nodes after taxonomy was built: %d" % count_list_nodes(taxonomy))
-    print_nice(taxonomy)
-    remove_lists(taxonomy)
-    print_nice(taxonomy)
+    temp_taxonomy = get_taxonomy(get_gids())
+    print("no of examples after taxonomy was built: %d" % count_examples(temp_taxonomy))
+    print("no of list nodes after taxonomy was built: %d" % count_list_nodes(temp_taxonomy))
+    print_nice(temp_taxonomy)
+    remove_small_nodes(temp_taxonomy, 100)
+    # remove_lists(temp_taxonomy)
+    print_nice(temp_taxonomy)
     run()
