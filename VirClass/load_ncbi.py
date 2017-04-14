@@ -267,7 +267,7 @@ def remove_lists(taxonomy):
     :return: taxonomy
     """
     # check for recurse exit
-    if isinstance(taxonomy, defaultdict) or isinstance(taxonomy, dict):
+    if isinstance(taxonomy, (defaultdict, dict)):
         for i in [x for x in list(taxonomy.keys()) if x != "data"]:
             if set(taxonomy[i]) == set(list({"data"})):
                 # if parent has only one list node, remove it
@@ -320,12 +320,11 @@ def count_list_nodes(taxonomy):
     return count
 
 
-def get_list_nodes_ids_labels(taxonomy, parent=""):
+def get_list_nodes_ids_labels(taxonomy):
     """
     Get taxonomy and return tuples of all list nodes.
 
     :param taxonomy: taxonomy
-    :param parent: parent
     :return: list of tuples (id, class)
     """
     if len(list(taxonomy.keys())) > 1 or list(taxonomy.keys()) == ["viruses"]:
