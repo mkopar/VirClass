@@ -241,6 +241,7 @@ def get_taxonomy(id_list, count=-1):
 def remove_small_nodes(taxonomy, threshold_size=100):
     """
     Remove small nodes from dataset.
+
     :param taxonomy: input taxonomy
     :param threshold_size: how many nodes do parent need to keep it
     :return: output taxonomy
