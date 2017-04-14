@@ -72,7 +72,7 @@ def init_keras(train_input_shape, p_drop_conv, p_drop_hidden, number_of_classes,
     # border_mode='valid': apply filter wherever it completely overlaps with the input
     temp_model = Sequential()
 
-    for i, (conv_stride, stride, downscale, filters) in enumerate(conv_params):
+    for i, (conv_stride, stride, downscale, filters) in enumerate(convolution_params):
         if i == 0:
             temp_model.add(Convolution1D(filters, conv_stride, border_mode='valid',
                                          input_shape=train_input_shape, subsample_length=stride))
@@ -80,7 +80,7 @@ def init_keras(train_input_shape, p_drop_conv, p_drop_hidden, number_of_classes,
             temp_model.add(Convolution1D(filters, conv_stride, border_mode='valid', subsample_length=stride))
         temp_model.add(Activation("relu"))  # rectified linear unit
         temp_model.add(MaxPooling1D(pool_length=downscale, stride=stride, border_mode='valid'))
-        temp_model.add(Dropout(p=p_drop_conv))
+        temp_model.add(Dropout(rate=p_drop_conv))
     # temp_model.add(Convolution1D(stride1, convolution1_stride, border_mode='valid', input_shape=train_input_shape))
     # temp_model.add(Activation("relu"))  # rectified linear unit
     # temp_model.add(MaxPooling1D(pool_length=downscale1, stride=stride1, border_mode='valid'))
@@ -98,7 +98,7 @@ def init_keras(train_input_shape, p_drop_conv, p_drop_hidden, number_of_classes,
 
     temp_model.add(Flatten())
     temp_model.add(Activation("relu"))
-    temp_model.add(Dropout(p=p_drop_hidden))
+    temp_model.add(Dropout(rate=p_drop_hidden))
 
     temp_model.add(Dense(number_of_classes))
     temp_model.add(Activation("softmax"))
@@ -122,46 +122,17 @@ if __name__ == "__main__":
     filename = results.filename
     debug = results.debug
     read_size = results.length
-    debug = True
+    # debug = True
+    # filename = "demo.fasta.gz"
 
     trX, teX, trY, teY, trteX, trteY, num_of_classes, train_class_sizes = \
         load_data_sets_from_file(filename, debug_mode=debug, input_length=read_size)
 
     print("trX shape:", trX.shape)
-    input_len = trX.shape[1]
-    # trX = trX.reshape(-1, 1, input_len)
-    # teX = teX.reshape(-1, 1, input_len)
-    # trteX = trteX.reshape(-1, 1, input_len)
-
-    # params for model and cascade initialization
-    # conv1_stride = 4
-    # stride_1 = 2
-    # downscale_1 = 3
-    # stride_2 = 2
-    # downscale_2 = 2
-    # stride_3 = 2
-    # downscale_3 = 1
-    # conv params: ((conv1_stride, stride1, downscale1, filters1), (conv2_stride, stride2, downscale2, filters2), ...)
+    # input_len = trX.shape[1]
     conv_params = ((4 * 16, 2, 3, 32), (12, 2, 2, 48), (8, 2, 1, 64))
-    # make dynamic
-    # conv_params = [conv1_stride, (stride_1, downscale_1), (stride_2, downscale_2), (stride_3, downscale_3)]
-
-    # X = K.ftensor4()
-    # Y = K.fmatrix()
-
     input_shape = (trX.shape[1], 1)  # (400, 1)
-
     model = init_keras(input_shape, 0.2, 0.5, num_of_classes, conv_params)
-    # params, X, Y, cost, updates, y_x = init_net(num_of_classes, input_len, conv_params)
-
-    # compile train and predict function
-    # train = theano.function(inputs=[X, Y], outputs=cost, updates=updates, allow_input_downcast=True)
-    # predict = theano.function(inputs=[X], outputs=y_x, allow_input_downcast=True)
-
-    # trX = trX.reshape(1, -1, input_len)
-    # teX = teX.reshape(1, -1, input_len)
-    # trteX = trteX.reshape(1, -1, input_len)
-
     model.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['accuracy'])
 
     trX_reshaped = trX.reshape(trX.shape + (1,))
