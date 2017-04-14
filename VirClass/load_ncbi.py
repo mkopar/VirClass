@@ -330,7 +330,7 @@ def get_list_nodes_ids_labels(taxonomy):
     if len(list(taxonomy.keys())) > 1 or list(taxonomy.keys()) == ["viruses"]:
         temp = []
         for k in [x for x in list(taxonomy.keys()) if x != "data"]:
-            temp += get_list_nodes_ids_labels(taxonomy[k], k)
+            temp += get_list_nodes_ids_labels(taxonomy[k])
         return temp
     # else:
     #     return [(x, parent) for x in taxonomy["data"]]
