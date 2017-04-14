@@ -113,7 +113,7 @@ def update_taxonomy(taxonomy, tax_path, genome_id):
     :param genome_id: genome_id
     :return: updated taxonomy
     """
-    if len(tax_path) == 0:
+    if not tax_path:
         return taxonomy
 
     tax = tax_path[0].lower()
@@ -245,7 +245,7 @@ def remove_small_nodes(taxonomy, threshold_size=100):
     :param threshold_size: how many nodes do parent need to keep it
     :return: output taxonomy
     """
-    if isinstance(taxonomy, defaultdict) or isinstance(taxonomy, dict):
+    if isinstance(taxonomy, (defaultdict, dict)):
         taxonomy_keys = [x for x in list(taxonomy.keys()) if x != "data"]
         for i in taxonomy_keys:
             print(i, len(taxonomy[i]['data']))
@@ -333,8 +333,8 @@ def get_list_nodes_ids_labels(taxonomy, parent=""):
         for k in [x for x in list(taxonomy.keys()) if x != "data"]:
             temp += get_list_nodes_ids_labels(taxonomy[k], k)
         return temp
-    else:
-        return [(x, parent) for x in taxonomy["data"]]
+    # else:
+    #     return [(x, parent) for x in taxonomy["data"]]
 
 
 # ************  ALL NODES OPERATIONS  ************ #
